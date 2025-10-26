@@ -17,7 +17,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.13.0"   # Vast Flutter-versie voor stabiliteit
+          flutter-version: "3.8.1"
 
       - name: Install dependencies
         run: flutter pub get
@@ -38,7 +38,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.13.0"
+          flutter-version: "3.8.1"
 
       - name: Install dependencies
         run: flutter pub get
@@ -62,7 +62,7 @@ jobs:
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
-          flutter-version: "3.13.0"
+          flutter-version: "3.8.1"
 
       - name: Install dependencies
         run: flutter pub get
