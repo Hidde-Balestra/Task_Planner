@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 import '../models/task.dart';
 import 'task_storage.dart';
@@ -26,7 +27,9 @@ class BackupService {
       await TaskStorage.saveTasks(tasks);
       return tasks;
     } catch (e) {
-      print('Restore failed: $e');
+      if (kDebugMode) {
+        print('Restore failed: $e');
+      }
       return null;
     }
   }
