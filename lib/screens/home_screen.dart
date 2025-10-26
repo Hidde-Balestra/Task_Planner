@@ -112,7 +112,7 @@ class _HomeScreenState extends State<HomeScreen> {
     int today = selectedDate.weekday % 7;
 
     return tasks.where((task) {
-      final creation = task.creationDate ?? DateTime.now();
+      final creation = task.creationDate;
 
       if (task.repeatDays.isEmpty) {
         return creation.year == selectedDate.year &&
