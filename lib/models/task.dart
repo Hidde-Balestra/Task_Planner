@@ -36,32 +36,31 @@ class Task {
   }
 
   factory Task.fromMap(Map<String, dynamic> map) {
-    final title = map['title'] != null ? map['title'].toString() : 'Untitled Task';
-
-    final repeatDaysRaw = map['repeatDays'];
-    final repeatDays = (repeatDaysRaw is List)
-        ? repeatDaysRaw.map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0).toList()
+    final title = map['title'] ?? 'Untitled Task';
+    final repeatDays = map['repeatDays'] != null
+        ? List<int>.from(map['repeatDays'])
         : <int>[];
+    final creationDate = map['creationDate'] != null
+        ? DateTime.tryParse(map['creationDate']) ?? DateTime.now()
+        : DateTime.now();
+    final rawCompleted = map['completedByDate'] as Map<String, dynamic>?;
 
-    DateTime creationDate;
-    if (map['creationDate'] != null) {
-      creationDate = DateTime.tryParse(map['creationDate'].toString()) ?? DateTime.now();
-    } else {
-      creationDate = DateTime.now();
+    final completedByDateSafe = <String, bool>{};
+    if (rawCompleted != null) {
+      rawCompleted.forEach((key, value) {
+        completedByDateSafe[key] = (value as bool?) ?? false;
+      });
     }
-
-    final rawCompleted = map['completedByDate'];
-    final completedByDate = (rawCompleted is Map)
-        ? rawCompleted.map((key, value) => MapEntry(key.toString(), value == true))
-        : <String, bool>{};
 
     return Task(
       title: title,
       repeatDays: repeatDays,
       creationDate: creationDate,
-      completedByDate: completedByDate,
+      completedByDate: completedByDateSafe,
     );
   }
+
+
 
 
   String toJson() => json.encode(toMap());
