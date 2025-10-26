@@ -29,3 +29,6 @@ jobs:
 
       - name: Build iOS
         run: flutter build ios --release
+
+env:
+  FLUTTER_ARCH: x64
