@@ -2,9 +2,8 @@ import 'dart:convert';
 
 class Task {
   String title;
-  List<int> repeatDays; // 0 = Sun ... 6 = Sat
+  List<int> repeatDays; // 0 = Sunday ... 6 = Saturday
   Map<String, bool> completedByDate;
-
   DateTime creationDate;
 
   Task({
@@ -27,22 +26,46 @@ class Task {
 
   String _dateKey(DateTime date) => '${date.year}-${date.month}-${date.day}';
 
-  Map<String, dynamic> toMap() => {
-    'title': title,
-    'repeatDays': repeatDays,
-    'completedByDate': completedByDate,
-    'creationDate': creationDate.toIso8601String(),
-  };
+  Map<String, dynamic> toMap() {
+    return {
+      'title': title,
+      'repeatDays': repeatDays,
+      'creationDate': creationDate.toIso8601String(),
+      'completedByDate': completedByDate,
+    };
+  }
 
-  String toJson() => jsonEncode(toMap());
+  factory Task.fromMap(Map<String, dynamic> map) {
+    final title = map['title'] != null ? map['title'].toString() : 'Untitled Task';
 
-  factory Task.fromJson(String source) {
-    final map = jsonDecode(source);
+    final repeatDaysRaw = map['repeatDays'];
+    final repeatDays = (repeatDaysRaw is List)
+        ? repeatDaysRaw.map((e) => e is int ? e : int.tryParse(e.toString()) ?? 0).toList()
+        : <int>[];
+
+    DateTime creationDate;
+    if (map['creationDate'] != null) {
+      creationDate = DateTime.tryParse(map['creationDate'].toString()) ?? DateTime.now();
+    } else {
+      creationDate = DateTime.now();
+    }
+
+    final rawCompleted = map['completedByDate'];
+    final completedByDate = (rawCompleted is Map)
+        ? rawCompleted.map((key, value) => MapEntry(key.toString(), value == true))
+        : <String, bool>{};
+
     return Task(
-      title: map['title'],
-      repeatDays: List<int>.from(map['repeatDays']),
-      completedByDate: Map<String, bool>.from(map['completedByDate'] ?? {}),
-      creationDate: DateTime.parse(map['creationDate']),
+      title: title,
+      repeatDays: repeatDays,
+      creationDate: creationDate,
+      completedByDate: completedByDate,
     );
   }
+
+
+  String toJson() => json.encode(toMap());
+
+  factory Task.fromJson(String source) =>
+      Task.fromMap(json.decode(source));
 }
