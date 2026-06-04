@@ -9,7 +9,6 @@ import android.content.Intent
 import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
-import es.antonborri.home_widget.HomeWidgetPlugin
 import org.json.JSONArray
 
 class TaskWidgetProvider : AppWidgetProvider() {
@@ -22,8 +21,14 @@ class TaskWidgetProvider : AppWidgetProvider() {
         for (id in appWidgetIds) {
             try {
                 updateWidget(context, appWidgetManager, id)
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
                 android.util.Log.e("TaskWidget", "onUpdate failed for id=$id", e)
+                // Prevent "Can't load widget" by always pushing a valid RemoteViews
+                try {
+                    appWidgetManager.updateAppWidget(
+                        id, RemoteViews(context.packageName, R.layout.task_widget)
+                    )
+                } catch (_: Throwable) {}
             }
         }
     }
@@ -52,14 +57,15 @@ class TaskWidgetProvider : AppWidgetProvider() {
             for (id in ids) {
                 try {
                     updateWidget(context, manager, id)
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     android.util.Log.e("TaskWidget", "updateAllWidgets failed for id=$id", e)
                 }
             }
         }
 
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-            val widgetData = HomeWidgetPlugin.getData(context)
+            // Access SharedPreferences directly — same file home_widget uses internally.
+            val widgetData = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
             val tasksJson = widgetData.getString("today_tasks", "[]") ?: "[]"
             val dateLabel = widgetData.getString("date_label", "Vandaag") ?: "Vandaag"
 

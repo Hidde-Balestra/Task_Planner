@@ -1,10 +1,8 @@
 package nl.hidde.taskplanner.task_planner
 
-import android.appwidget.AppWidgetManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import es.antonborri.home_widget.HomeWidgetPlugin
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
@@ -25,7 +23,7 @@ class TaskToggleReceiver : BroadcastReceiver() {
     }
 
     private fun toggleInWidgetPrefs(context: Context, taskId: String) {
-        val prefs = HomeWidgetPlugin.getData(context)
+        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
         val json = prefs.getString("today_tasks", "[]") ?: "[]"
         try {
             val arr = JSONArray(json)
