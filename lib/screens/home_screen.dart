@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
 import '../models/task.dart';
-import '../services/task_storage.dart';
 import '../services/backup_service.dart';
+import '../services/task_storage.dart';
+import '../services/widget_service.dart';
 import '../widgets/add_task_dialog.dart';
 import '../widgets/task_tile.dart';
 
@@ -15,21 +20,57 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Task> tasks = [];
   DateTime selectedDate = DateTime.now();
+  StreamSubscription<Uri?>? _widgetClickSub;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadTasks();
     _loadLastDate();
+    _widgetClickSub = HomeWidget.widgetClicked.listen(_onWidgetClicked);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _widgetClickSub?.cancel();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _reloadFromDisk();
+    }
+  }
+
+  Future<void> _reloadFromDisk() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.reload();
+      await _loadTasks();
+    } catch (e) {
+      debugPrint('Reload from disk failed: $e');
+    }
+  }
+
+  Future<void> _onWidgetClicked(Uri? uri) async {
+    // Widget toggles are handled by Kotlin's TaskToggleReceiver.
+    // Reload tasks so the app reflects any changes made via the widget.
+    await _reloadFromDisk();
   }
 
   Future<void> _loadTasks() async {
     try {
       final loadedTasks = await TaskStorage.loadTasks();
-      if (mounted) setState(() => tasks = loadedTasks);
+      if (mounted) {
+        setState(() => tasks = loadedTasks);
+        await WidgetService.updateWidget(tasks, selectedDate);
+      }
     } catch (e) {
       debugPrint('Failed to load tasks: $e');
     }
@@ -37,6 +78,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _saveTasks() async {
     await TaskStorage.saveTasks(tasks);
+    await WidgetService.updateWidget(tasks, selectedDate);
   }
 
   Future<void> _loadLastDate() async {
@@ -115,24 +157,12 @@ class _HomeScreenState extends State<HomeScreen> {
       selectedDate = selectedDate.add(Duration(days: offset));
     });
     _saveLastDate();
+    WidgetService.updateWidget(tasks, selectedDate);
   }
 
   List<Task> get _filteredTasks {
-    int today = selectedDate.weekday % 7;
-
-    return tasks.where((task) {
-      final creation = task.creationDate;
-
-      if (task.repeatDays.isEmpty) {
-        return creation.year == selectedDate.year &&
-            creation.month == selectedDate.month &&
-            creation.day == selectedDate.day;
-      }
-
-      return task.repeatDays.contains(today);
-    }).toList();
+    return WidgetService.filterTasksForDate(tasks, selectedDate);
   }
-
 
   Future<void> _handleMenuAction(String value) async {
     if (value == 'backup') {
@@ -154,6 +184,7 @@ class _HomeScreenState extends State<HomeScreen> {
         if (!mounted) return;
         if (restored != null) {
           setState(() => tasks = restored);
+          await WidgetService.updateWidget(tasks, selectedDate);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Backup hersteld')),
           );
@@ -205,27 +236,27 @@ class _HomeScreenState extends State<HomeScreen> {
       body: _filteredTasks.isEmpty
           ? const Center(child: Text('No tasks for this day'))
           : ListView.builder(
-        itemCount: _filteredTasks.length,
-        itemBuilder: (context, index) {
-          final task = _filteredTasks[index];
-          return TaskTile(
-            task: task,
-            date: selectedDate,
-            onToggle: () => _toggleTask(task),
-            onEdit: () => _editTask(task),
-            onDelete: () async {
-              final confirm = await _confirmDelete();
-              if (confirm == true) {
-                setState(() {
-                  tasks.remove(task);
-                });
-                _saveTasks();
-              }
-              return confirm;
-            },
-          );
-        },
-      ),
+              itemCount: _filteredTasks.length,
+              itemBuilder: (context, index) {
+                final task = _filteredTasks[index];
+                return TaskTile(
+                  task: task,
+                  date: selectedDate,
+                  onToggle: () => _toggleTask(task),
+                  onEdit: () => _editTask(task),
+                  onDelete: () async {
+                    final confirm = await _confirmDelete();
+                    if (confirm == true) {
+                      setState(() {
+                        tasks.remove(task);
+                      });
+                      await _saveTasks();
+                    }
+                    return confirm;
+                  },
+                );
+              },
+            ),
       floatingActionButton: FloatingActionButton(
         onPressed: () => showDialog(
           context: context,

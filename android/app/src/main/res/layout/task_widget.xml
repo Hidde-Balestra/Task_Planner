@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@drawable/widget_background"
+    android:padding="12dp">
+
+    <!-- Header row -->
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="28dp"
+        android:layout_marginBottom="6dp">
+
+        <TextView
+            android:id="@+id/widget_title"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="Task Planner"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#FF757575"
+            android:gravity="center_vertical"
+            android:layout_alignParentStart="true" />
+
+        <TextView
+            android:id="@+id/widget_date"
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="Vandaag"
+            android:textSize="11sp"
+            android:textStyle="bold"
+            android:textColor="#FF2196F3"
+            android:gravity="center_vertical"
+            android:layout_alignParentEnd="true" />
+    </RelativeLayout>
+
+    <!-- Divider -->
+    <View
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#FFE0E0E0"
+        android:layout_marginBottom="2dp" />
+
+    <!-- Task list -->
+    <ListView
+        android:id="@+id/widget_list"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:divider="@null"
+        android:dividerHeight="0dp" />
+
+    <!-- Empty state -->
+    <TextView
+        android:id="@+id/widget_empty"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:gravity="center"
+        android:text="Geen taken vandaag"
+        android:textSize="13sp"
+        android:textColor="#FF9E9E9E"
+        android:visibility="gone" />
+
+    <!-- Open app link -->
+    <TextView
+        android:id="@+id/widget_open_app"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Open app →"
+        android:textSize="10sp"
+        android:textColor="#FF2196F3"
+        android:gravity="end"
+        android:paddingTop="4dp" />
+</LinearLayout>
