@@ -1,8 +1,5 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:home_widget/home_widget.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,7 +20,6 @@ class HomeScreen extends StatefulWidget {
 class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Task> tasks = [];
   DateTime selectedDate = DateTime.now();
-  StreamSubscription<Uri?>? _widgetClickSub;
 
   @override
   void initState() {
@@ -31,13 +27,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _loadTasks();
     _loadLastDate();
-    _widgetClickSub = HomeWidget.widgetClicked.listen(_onWidgetClicked);
   }
 
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
-    _widgetClickSub?.cancel();
     super.dispose();
   }
 
@@ -56,12 +50,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     } catch (e) {
       debugPrint('Reload from disk failed: $e');
     }
-  }
-
-  Future<void> _onWidgetClicked(Uri? uri) async {
-    // Widget toggles are handled by Kotlin's TaskToggleReceiver.
-    // Reload tasks so the app reflects any changes made via the widget.
-    await _reloadFromDisk();
   }
 
   Future<void> _loadTasks() async {
