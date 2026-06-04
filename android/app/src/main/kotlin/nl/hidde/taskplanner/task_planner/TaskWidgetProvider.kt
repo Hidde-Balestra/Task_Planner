@@ -136,7 +136,8 @@ class TaskWidgetProvider : AppWidgetProvider() {
         }
 
         // Reads today's tasks straight from Flutter's SharedPreferences.
-        // This works without the app ever having called HomeWidget.saveWidgetData().
+        // Flutter's shared_preferences_android 2.x stores StringList as a String
+        // (with a special prefix), handled by FlutterPrefsHelper.
         private fun loadTodayTasks(context: Context, today: Calendar): List<JSONObject> {
             val year = today.get(Calendar.YEAR)
             val month = today.get(Calendar.MONTH) + 1   // Calendar is 0-based
@@ -150,17 +151,17 @@ class TaskWidgetProvider : AppWidgetProvider() {
             val flutterPrefs = context.getSharedPreferences(
                 "FlutterSharedPreferences", Context.MODE_PRIVATE
             )
-            val rawSet = flutterPrefs.getStringSet("flutter.tasks", null) ?: return emptyList()
+            val taskStrings = FlutterPrefsHelper.readStringList(flutterPrefs, "flutter.tasks")
 
             val result = mutableListOf<JSONObject>()
-            for (jsonStr in rawSet) {
+            for (jsonStr in taskStrings) {
                 try {
                     val obj = JSONObject(jsonStr)
                     val repeatDays = obj.optJSONArray("repeatDays")
                     val showToday = if (repeatDays != null && repeatDays.length() > 0) {
                         (0 until repeatDays.length()).any { repeatDays.getInt(it) == dartWeekday }
                     } else {
-                        // One-time task: compare creation date
+                        // One-time task: compare creation date (ISO 8601: "2024-06-10T00:00:00.000")
                         val iso = obj.optString("creationDate")
                         val datePart = iso.substringBefore("T")
                         val parts = datePart.split("-")

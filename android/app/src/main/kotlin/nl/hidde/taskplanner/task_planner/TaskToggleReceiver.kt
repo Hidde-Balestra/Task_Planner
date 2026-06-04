@@ -3,7 +3,6 @@ package nl.hidde.taskplanner.task_planner
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
-import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Calendar
 
@@ -17,54 +16,38 @@ class TaskToggleReceiver : BroadcastReceiver() {
         if (intent.action != ACTION_TOGGLE) return
         val taskId = intent.getStringExtra("task_id") ?: return
 
-        toggleInWidgetPrefs(context, taskId)
-        toggleInFlutterPrefs(context, taskId)
-        refreshWidget(context)
-    }
-
-    private fun toggleInWidgetPrefs(context: Context, taskId: String) {
-        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
-        val json = prefs.getString("today_tasks", "[]") ?: "[]"
         try {
-            val arr = JSONArray(json)
-            for (i in 0 until arr.length()) {
-                val obj = arr.getJSONObject(i)
-                if (obj.optString("id") == taskId) {
-                    obj.put("completed", !obj.optBoolean("completed", false))
-                    break
-                }
-            }
-            prefs.edit().putString("today_tasks", arr.toString()).apply()
+            toggleInFlutterPrefs(context, taskId)
         } catch (_: Exception) {}
+        refreshWidget(context)
     }
 
     private fun toggleInFlutterPrefs(context: Context, taskId: String) {
         val cal = Calendar.getInstance()
-        // Date key format matches Task._dateKey() in Dart: "yyyy-M-d" (no zero padding)
         val dateKey =
             "${cal.get(Calendar.YEAR)}-${cal.get(Calendar.MONTH) + 1}-${cal.get(Calendar.DAY_OF_MONTH)}"
 
         val flutterPrefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
-        val tasksSet = flutterPrefs.getStringSet("flutter.tasks", null) ?: return
+        val taskStrings = FlutterPrefsHelper.readStringList(flutterPrefs, "flutter.tasks")
+        if (taskStrings.isEmpty()) return
 
-        val updated = mutableSetOf<String>()
-        for (taskJson in tasksSet) {
+        val updated = taskStrings.map { jsonStr ->
             try {
-                val obj = JSONObject(taskJson)
+                val obj = JSONObject(jsonStr)
                 if (obj.optString("id") == taskId) {
                     val completedByDate = obj.optJSONObject("completedByDate") ?: JSONObject()
                     completedByDate.put(dateKey, !completedByDate.optBoolean(dateKey, false))
                     obj.put("completedByDate", completedByDate)
-                    updated.add(obj.toString())
+                    obj.toString()
                 } else {
-                    updated.add(taskJson)
+                    jsonStr
                 }
-            } catch (_: Exception) {
-                updated.add(taskJson)
-            }
+            } catch (_: Exception) { jsonStr }
         }
-        // New HashSet reference to avoid the Android SharedPreferences StringSet mutation bug
-        flutterPrefs.edit().putStringSet("flutter.tasks", HashSet(updated)).apply()
+
+        val editor = flutterPrefs.edit()
+        FlutterPrefsHelper.writeStringList(editor, "flutter.tasks", updated)
+        editor.apply()
     }
 
     private fun refreshWidget(context: Context) {
