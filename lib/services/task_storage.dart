@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task.dart';
 
@@ -24,7 +26,7 @@ class TaskStorage {
 
   static Future<String> exportBackup() async {
     final tasks = await loadTasks();
-    return tasks.map((t) => t.toMap()).toList().toString();
+    return jsonEncode(tasks.map((t) => t.toMap()).toList());
   }
 
   static Future<void> importBackup(List<Task> tasks) async {

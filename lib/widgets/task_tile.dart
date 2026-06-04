@@ -22,7 +22,7 @@ class TaskTile extends StatelessWidget {
     final completed = task.isCompleted(date);
 
     return Dismissible(
-      key: Key(task.title + task.hashCode.toString()),
+      key: Key(task.id),
       confirmDismiss: (direction) async => onDelete?.call(),
       background: Container(
         color: Colors.red,

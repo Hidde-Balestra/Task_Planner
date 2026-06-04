@@ -26,7 +26,13 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   void initState() {
     super.initState();
     _controller = TextEditingController(text: widget.initialTitle ?? '');
-    selectedDays = widget.initialDays ?? [];
+    selectedDays = List<int>.from(widget.initialDays ?? []);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
   }
 
   @override

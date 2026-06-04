@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -26,8 +27,12 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadTasks() async {
-    final loadedTasks = await TaskStorage.loadTasks();
-    setState(() => tasks = loadedTasks);
+    try {
+      final loadedTasks = await TaskStorage.loadTasks();
+      if (mounted) setState(() => tasks = loadedTasks);
+    } catch (e) {
+      debugPrint('Failed to load tasks: $e');
+    }
   }
 
   Future<void> _saveTasks() async {
@@ -35,12 +40,17 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> _loadLastDate() async {
-    final prefs = await SharedPreferences.getInstance();
-    final lastDateString = prefs.getString('lastDate');
-    if (lastDateString != null) {
-      setState(() {
-        selectedDate = DateTime.parse(lastDateString);
-      });
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final lastDateString = prefs.getString('lastDate');
+      if (lastDateString != null) {
+        final parsed = DateTime.tryParse(lastDateString);
+        if (parsed != null && mounted) {
+          setState(() => selectedDate = parsed);
+        }
+      }
+    } catch (e) {
+      debugPrint('Failed to load last date: $e');
     }
   }
 
@@ -49,19 +59,18 @@ class _HomeScreenState extends State<HomeScreen> {
     await prefs.setString('lastDate', selectedDate.toIso8601String());
   }
 
-  void _addTask(String title, List<int> repeatDays) {
+  Future<void> _addTask(String title, List<int> repeatDays) async {
     setState(() {
       tasks.add(Task(title: title, repeatDays: repeatDays));
     });
-    TaskStorage.saveTasks(tasks);
+    await _saveTasks();
   }
 
-
-  void _toggleTask(Task task) {
+  Future<void> _toggleTask(Task task) async {
     setState(() {
       task.toggleCompletion(selectedDate);
     });
-    _saveTasks();
+    await _saveTasks();
   }
 
   void _editTask(Task task) {
@@ -127,18 +136,36 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleMenuAction(String value) async {
     if (value == 'backup') {
-      final path = await BackupService.backup(tasks);
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Backup saved: $path')),
-      );
-    } else if (value == 'restore') {
-      final restored = await BackupService.restore();
-      if (restored != null) {
-        setState(() => tasks = restored);
+      try {
+        final path = await BackupService.backup(tasks);
         if (!mounted) return;
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Backup restored successfully')),
+          SnackBar(content: Text('Backup opgeslagen: $path')),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Backup mislukt')),
+        );
+      }
+    } else if (value == 'restore') {
+      try {
+        final restored = await BackupService.restore();
+        if (!mounted) return;
+        if (restored != null) {
+          setState(() => tasks = restored);
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Backup hersteld')),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Geen backupbestand gevonden')),
+          );
+        }
+      } catch (e) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Herstellen mislukt')),
         );
       }
     }
