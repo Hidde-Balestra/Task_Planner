@@ -42,16 +42,17 @@
         android:background="#FFE0E0E0"
         android:layout_marginBottom="2dp" />
 
-    <!-- Task list -->
+    <!-- Task list (starts GONE; shown only when tasks are present) -->
     <ListView
         android:id="@+id/widget_list"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
         android:divider="@null"
-        android:dividerHeight="0dp" />
+        android:dividerHeight="0dp"
+        android:visibility="gone" />
 
-    <!-- Empty state -->
+    <!-- Empty state (starts VISIBLE; hidden when tasks are present) -->
     <TextView
         android:id="@+id/widget_empty"
         android:layout_width="match_parent"
@@ -61,7 +62,7 @@
         android:text="Geen taken vandaag"
         android:textSize="13sp"
         android:textColor="#FF9E9E9E"
-        android:visibility="gone" />
+        android:visibility="visible" />
 
     <!-- Open app link -->
     <TextView

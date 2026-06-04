@@ -21,7 +21,11 @@ class TaskWidgetProvider : AppWidgetProvider() {
         appWidgetIds: IntArray
     ) {
         for (id in appWidgetIds) {
-            updateWidget(context, appWidgetManager, id)
+            try {
+                updateWidget(context, appWidgetManager, id)
+            } catch (e: Exception) {
+                android.util.Log.e("TaskWidget", "updateWidget failed for id=$id", e)
+            }
         }
     }
 
