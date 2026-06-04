@@ -48,11 +48,6 @@
                 android:resource="@xml/task_widget_info" />
         </receiver>
 
-        <service
-            android:name=".TaskWidgetService"
-            android:permission="android.permission.BIND_REMOTEVIEWS"
-            android:exported="false" />
-
         <receiver
             android:name=".TaskToggleReceiver"
             android:exported="false">

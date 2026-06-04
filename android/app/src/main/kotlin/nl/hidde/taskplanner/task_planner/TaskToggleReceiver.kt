@@ -70,13 +70,6 @@ class TaskToggleReceiver : BroadcastReceiver() {
     }
 
     private fun refreshWidget(context: Context) {
-        val manager = AppWidgetManager.getInstance(context)
         TaskWidgetProvider.updateAllWidgets(context)
-        val ids = manager.getAppWidgetIds(
-            android.content.ComponentName(context, TaskWidgetProvider::class.java)
-        )
-        if (ids.isNotEmpty()) {
-            manager.notifyAppWidgetViewDataChanged(ids, R.id.widget_list)
-        }
     }
 }

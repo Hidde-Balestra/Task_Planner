@@ -1,10 +1,3 @@
 package nl.hidde.taskplanner.task_planner
 
-import android.content.Intent
-import android.widget.RemoteViewsService
-
-class TaskWidgetService : RemoteViewsService() {
-    override fun onGetViewFactory(intent: Intent): RemoteViewsFactory {
-        return TaskWidgetFactory(applicationContext, intent)
-    }
-}
+// Unused — kept for backward compatibility but not registered in the manifest.
