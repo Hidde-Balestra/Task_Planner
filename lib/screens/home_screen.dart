@@ -5,7 +5,6 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task.dart';
 import '../services/backup_service.dart';
 import '../services/task_storage.dart';
-import '../services/widget_service.dart';
 import '../widgets/add_task_dialog.dart';
 import '../widgets/task_tile.dart';
 
@@ -56,7 +55,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       final loadedTasks = await TaskStorage.loadTasks();
       if (mounted) {
         setState(() => tasks = loadedTasks);
-        await WidgetService.updateWidget(tasks, selectedDate);
       }
     } catch (e) {
       debugPrint('Failed to load tasks: $e');
@@ -65,7 +63,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _saveTasks() async {
     await TaskStorage.saveTasks(tasks);
-    await WidgetService.updateWidget(tasks, selectedDate);
   }
 
   Future<void> _loadLastDate() async {
@@ -144,11 +141,18 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       selectedDate = selectedDate.add(Duration(days: offset));
     });
     _saveLastDate();
-    WidgetService.updateWidget(tasks, selectedDate);
   }
 
   List<Task> get _filteredTasks {
-    return WidgetService.filterTasksForDate(tasks, selectedDate);
+    final weekday = selectedDate.weekday % 7;
+    return tasks.where((task) {
+      if (task.repeatDays.isEmpty) {
+        return task.creationDate.year == selectedDate.year &&
+            task.creationDate.month == selectedDate.month &&
+            task.creationDate.day == selectedDate.day;
+      }
+      return task.repeatDays.contains(weekday);
+    }).toList();
   }
 
   Future<void> _handleMenuAction(String value) async {
@@ -171,7 +175,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         if (!mounted) return;
         if (restored != null) {
           setState(() => tasks = restored);
-          await WidgetService.updateWidget(tasks, selectedDate);
           if (!mounted) return;
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Backup hersteld')),
