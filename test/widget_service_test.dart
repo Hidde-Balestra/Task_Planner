@@ -3,7 +3,7 @@ import 'package:task_planner/models/task.dart';
 import 'package:task_planner/services/widget_service.dart';
 
 void main() {
-  group('WidgetService.filterTasksForDate', () {
+  group('WidgetService.filterTasksForDate - one-time tasks', () {
     test('returns one-time task only on its creation date', () {
       final date = DateTime(2024, 6, 10);
       final task = Task(title: 'One-time', repeatDays: [], creationDate: date);
@@ -13,7 +13,9 @@ void main() {
         isEmpty,
       );
     });
+  });
 
+  group('WidgetService.filterTasksForDate - weekly tasks', () {
     test('returns repeating task on matching weekday', () {
       // Monday = DateTime.weekday 1; 1 % 7 = 1
       final monday = DateTime(2024, 6, 10);
@@ -41,10 +43,6 @@ void main() {
       expect(WidgetService.filterTasksForDate([task], date), isEmpty);
     });
 
-    test('returns empty list for empty task list', () {
-      expect(WidgetService.filterTasksForDate([], DateTime(2024, 6, 10)), isEmpty);
-    });
-
     test('filters multiple tasks independently', () {
       final date = DateTime(2024, 6, 10); // Monday
       final matching = Task(title: 'Monday', repeatDays: [1]);
@@ -55,6 +53,114 @@ void main() {
       );
       expect(result, contains(matching));
       expect(result, isNot(contains(notMatching)));
+    });
+  });
+
+  group('WidgetService.filterTasksForDate - interval tasks', () {
+    test('shows on start date (diff == 0)', () {
+      final start = DateTime(2024, 6, 10);
+      final task = Task(
+        title: 'Bi-weekly',
+        repeatDays: [],
+        repeatIntervalDays: 14,
+        creationDate: start,
+      );
+      expect(WidgetService.filterTasksForDate([task], start), contains(task));
+    });
+
+    test('shows exactly N days after start', () {
+      final start = DateTime(2024, 6, 10);
+      final task = Task(
+        title: 'Every 14 days',
+        repeatDays: [],
+        repeatIntervalDays: 14,
+        creationDate: start,
+      );
+      expect(
+        WidgetService.filterTasksForDate([task], DateTime(2024, 6, 24)),
+        contains(task),
+      );
+    });
+
+    test('does not show between interval days', () {
+      final start = DateTime(2024, 6, 10);
+      final task = Task(
+        title: 'Every 14 days',
+        repeatDays: [],
+        repeatIntervalDays: 14,
+        creationDate: start,
+      );
+      expect(
+        WidgetService.filterTasksForDate([task], DateTime(2024, 6, 17)),
+        isEmpty,
+      );
+    });
+
+    test('does not show before start date', () {
+      final start = DateTime(2024, 6, 10);
+      final task = Task(
+        title: 'Future task',
+        repeatDays: [],
+        repeatIntervalDays: 7,
+        creationDate: start,
+      );
+      expect(
+        WidgetService.filterTasksForDate([task], DateTime(2024, 6, 3)),
+        isEmpty,
+      );
+    });
+
+    test('every 7 days shows on multiples of 7', () {
+      final start = DateTime(2024, 1, 1);
+      final task = Task(
+        title: 'Weekly interval',
+        repeatDays: [],
+        repeatIntervalDays: 7,
+        creationDate: start,
+      );
+      for (final offset in [0, 7, 14, 21, 28]) {
+        final date = start.add(Duration(days: offset));
+        expect(
+          WidgetService.filterTasksForDate([task], date),
+          contains(task),
+          reason: '+$offset days should match',
+        );
+      }
+      for (final offset in [1, 6, 8, 13]) {
+        final date = start.add(Duration(days: offset));
+        expect(
+          WidgetService.filterTasksForDate([task], date),
+          isEmpty,
+          reason: '+$offset days should not match',
+        );
+      }
+    });
+
+    test('interval task takes priority over repeatDays when intervalDays > 0', () {
+      // A task with both repeatDays and repeatIntervalDays should use interval logic
+      final start = DateTime(2024, 6, 10); // Monday
+      final task = Task(
+        title: 'Interval wins',
+        repeatDays: [1], // would match every Monday
+        repeatIntervalDays: 14,
+        creationDate: start,
+      );
+      // Next Monday (June 17) is NOT 14 days away → should NOT match
+      expect(
+        WidgetService.filterTasksForDate([task], DateTime(2024, 6, 17)),
+        isEmpty,
+      );
+      // 14 days away (June 24) → should match
+      expect(
+        WidgetService.filterTasksForDate([task], DateTime(2024, 6, 24)),
+        contains(task),
+      );
+    });
+  });
+
+  group('WidgetService.filterTasksForDate - general', () {
+    test('returns empty list for empty task list', () {
+      expect(WidgetService.filterTasksForDate([], DateTime(2024, 6, 10)), isEmpty);
     });
   });
 

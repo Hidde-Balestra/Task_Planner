@@ -4,6 +4,9 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.StrikethroughSpan
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetBackgroundIntent
@@ -22,6 +25,12 @@ class TaskWidgetProvider : HomeWidgetProvider() {
         Triple(R.id.task_row_3, R.id.task_check_3, R.id.task_title_3),
         Triple(R.id.task_row_4, R.id.task_check_4, R.id.task_title_4),
     )
+
+    private fun priorityColor(priority: String): Int = when (priority) {
+        "medium" -> 0xFFFF9800.toInt()
+        "high" -> 0xFFF44336.toInt()
+        else -> 0xFF4CAF50.toInt()
+    }
 
     override fun onUpdate(
         context: Context,
@@ -44,13 +53,25 @@ class TaskWidgetProvider : HomeWidgetProvider() {
                     val taskId = task.getString("id")
                     val title = task.getString("title")
                     val done = task.getBoolean("done")
+                    val priority = task.optString("priority", "low")
+                    val color = priorityColor(priority)
 
                     views.setViewVisibility(rowId, View.VISIBLE)
-                    views.setTextViewText(titleId, title)
+                    val titleText = SpannableString(title)
+                    if (done) {
+                        titleText.setSpan(
+                            StrikethroughSpan(),
+                            0,
+                            title.length,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+                        )
+                    }
+                    views.setTextViewText(titleId, titleText)
                     views.setImageViewResource(
                         checkId,
                         if (done) R.drawable.widget_check_done else R.drawable.widget_check_todo,
                     )
+                    views.setInt(checkId, "setColorFilter", color)
 
                     val toggleUri = Uri.parse("taskplanner://toggle?id=$taskId&date=$today")
                     val pendingIntent = HomeWidgetBackgroundIntent.getBroadcast(context, toggleUri)
