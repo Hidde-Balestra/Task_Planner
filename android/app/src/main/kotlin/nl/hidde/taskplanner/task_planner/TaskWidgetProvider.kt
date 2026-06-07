@@ -10,7 +10,6 @@ import android.os.Build
 import android.view.View
 import android.widget.RemoteViews
 import org.json.JSONArray
-import org.json.JSONObject
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -27,7 +26,6 @@ class TaskWidgetProvider : AppWidgetProvider() {
                 updateWidget(context, appWidgetManager, id)
             } catch (e: Throwable) {
                 android.util.Log.e("TaskWidget", "onUpdate failed for id=$id", e)
-                // Always push a valid RemoteViews so Android never shows "Can't load widget"
                 try {
                     appWidgetManager.updateAppWidget(
                         id, RemoteViews(context.packageName, R.layout.task_widget)
@@ -68,14 +66,18 @@ class TaskWidgetProvider : AppWidgetProvider() {
         }
 
         fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-            val today = Calendar.getInstance()
-            val tasks = loadTodayTasks(context, today)
-            val dateLabel = SimpleDateFormat("d MMM", Locale("nl", "NL")).format(today.time)
+            // home_widget writes today_tasks + date_label to HomeWidgetPreferences via saveWidgetData()
+            val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
+            val tasksJson = prefs.getString("today_tasks", "[]") ?: "[]"
+            val fallbackDate = SimpleDateFormat("E, MMM d", Locale.getDefault())
+                .format(Calendar.getInstance().time)
+            val dateLabel = prefs.getString("date_label", fallbackDate) ?: fallbackDate
 
             val views = RemoteViews(context.packageName, R.layout.task_widget)
             views.setTextViewText(R.id.widget_date, dateLabel)
 
-            val taskCount = tasks.size
+            val allTasks = try { JSONArray(tasksJson) } catch (_: Exception) { JSONArray() }
+            val taskCount = allTasks.length()
             val visibleCount = minOf(taskCount, MAX_VISIBLE)
 
             val toggleFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
@@ -85,11 +87,15 @@ class TaskWidgetProvider : AppWidgetProvider() {
 
             for (i in 0 until MAX_VISIBLE) {
                 if (i < visibleCount) {
-                    val task = tasks[i]
-                    views.setViewVisibility(ROW_IDS[i], View.VISIBLE)
-                    views.setTextViewText(TITLE_IDS[i], task.getString("title"))
+                    val task = allTasks.getJSONObject(i)
+                    val taskId = task.optString("id")
+                    val taskTitle = task.optString("title")
+                    val completed = task.optBoolean("completed", false)
 
-                    if (task.optBoolean("completed", false)) {
+                    views.setViewVisibility(ROW_IDS[i], View.VISIBLE)
+                    views.setTextViewText(TITLE_IDS[i], taskTitle)
+
+                    if (completed) {
                         views.setImageViewResource(CHECK_IDS[i], R.drawable.widget_check_on)
                         views.setInt(TITLE_IDS[i], "setTextColor", 0xFFBDBDBD.toInt())
                     } else {
@@ -99,7 +105,7 @@ class TaskWidgetProvider : AppWidgetProvider() {
 
                     val toggleIntent = Intent(context, TaskToggleReceiver::class.java).apply {
                         action = TaskToggleReceiver.ACTION_TOGGLE
-                        putExtra("task_id", task.optString("id"))
+                        putExtra("task_id", taskId)
                     }
                     val pi = PendingIntent.getBroadcast(
                         context, appWidgetId * 10 + i, toggleIntent, toggleFlags
@@ -129,62 +135,12 @@ class TaskWidgetProvider : AppWidgetProvider() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             else
                 PendingIntent.FLAG_UPDATE_CURRENT
-            val openPi = PendingIntent.getActivity(context, appWidgetId, openIntent, openFlags)
-            views.setOnClickPendingIntent(R.id.widget_open_app, openPi)
+            views.setOnClickPendingIntent(
+                R.id.widget_open_app,
+                PendingIntent.getActivity(context, appWidgetId, openIntent, openFlags)
+            )
 
             appWidgetManager.updateAppWidget(appWidgetId, views)
-        }
-
-        // Reads today's tasks straight from Flutter's SharedPreferences.
-        // Flutter's shared_preferences_android 2.x stores StringList as a String
-        // (with a special prefix), handled by FlutterPrefsHelper.
-        private fun loadTodayTasks(context: Context, today: Calendar): List<JSONObject> {
-            val year = today.get(Calendar.YEAR)
-            val month = today.get(Calendar.MONTH) + 1   // Calendar is 0-based
-            val day = today.get(Calendar.DAY_OF_MONTH)
-            val dateKey = "$year-$month-$day"
-
-            // Dart: Mon=1..Sat=6, Sun=0  (DateTime.weekday % 7)
-            // Java Calendar: Sun=1, Mon=2..Sat=7  → (javaDay - 1) % 7
-            val dartWeekday = (today.get(Calendar.DAY_OF_WEEK) - 1) % 7
-
-            val flutterPrefs = context.getSharedPreferences(
-                "FlutterSharedPreferences", Context.MODE_PRIVATE
-            )
-            val taskStrings = FlutterPrefsHelper.readStringList(flutterPrefs, "flutter.tasks")
-
-            val result = mutableListOf<JSONObject>()
-            for (jsonStr in taskStrings) {
-                try {
-                    val obj = JSONObject(jsonStr)
-                    val repeatDays = obj.optJSONArray("repeatDays")
-                    val showToday = if (repeatDays != null && repeatDays.length() > 0) {
-                        (0 until repeatDays.length()).any { repeatDays.getInt(it) == dartWeekday }
-                    } else {
-                        // One-time task: compare creation date (ISO 8601: "2024-06-10T00:00:00.000")
-                        val iso = obj.optString("creationDate")
-                        val datePart = iso.substringBefore("T")
-                        val parts = datePart.split("-")
-                        parts.size == 3 &&
-                            parts[0].toIntOrNull() == year &&
-                            parts[1].toIntOrNull() == month &&
-                            parts[2].toIntOrNull() == day
-                    }
-
-                    if (showToday) {
-                        val completed = obj.optJSONObject("completedByDate")
-                            ?.optBoolean(dateKey, false) ?: false
-                        result.add(
-                            JSONObject().apply {
-                                put("id", obj.optString("id"))
-                                put("title", obj.optString("title"))
-                                put("completed", completed)
-                            }
-                        )
-                    }
-                } catch (_: Exception) {}
-            }
-            return result
         }
     }
 }
