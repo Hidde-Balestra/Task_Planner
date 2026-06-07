@@ -132,13 +132,11 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
             const SizedBox(height: 16),
             const Text('Priority', style: TextStyle(fontSize: 12)),
             const SizedBox(height: 6),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+            Wrap(
+              spacing: 6,
               children: Priority.values.map((p) {
                 final selected = _priority == p;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 3),
-                  child: ChoiceChip(
+                return ChoiceChip(
                     label: Text(priorityLabel(p)),
                     selected: selected,
                     selectedColor: priorityColor(p).withValues(alpha: 0.25),
@@ -147,7 +145,6 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
                       radius: 8,
                     ),
                     onSelected: (_) => setState(() => _priority = p),
-                  ),
                 );
               }).toList(),
             ),
