@@ -176,6 +176,19 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _saveLastDate();
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: selectedDate,
+      firstDate: DateTime(2020),
+      lastDate: DateTime(2030),
+    );
+    if (picked != null) {
+      setState(() => selectedDate = picked);
+      _saveLastDate();
+    }
+  }
+
   List<Task> get _filteredTasks =>
       WidgetService.filterTasksForDate(tasks, selectedDate);
 
@@ -234,10 +247,14 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             icon: const Icon(Icons.chevron_left),
             onPressed: () => _changeDay(-1),
           ),
-          Center(
+          GestureDetector(
+            onTap: _pickDate,
             child: Padding(
               padding: const EdgeInsets.symmetric(horizontal: 8.0),
-              child: Text(formattedDate, style: const TextStyle(fontSize: 16)),
+              child: Text(
+                formattedDate,
+                style: const TextStyle(fontSize: 16, decoration: TextDecoration.underline),
+              ),
             ),
           ),
           IconButton(

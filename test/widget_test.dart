@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:task_planner/models/task.dart';
+import 'package:task_planner/screens/home_screen.dart';
 import 'package:task_planner/widgets/add_task_dialog.dart';
 import 'package:task_planner/widgets/task_tile.dart';
 
@@ -298,6 +299,97 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Task Planner'), findsOneWidget);
       expect(find.text('No tasks for this day'), findsOneWidget);
+    });
+  });
+
+  group('HomeScreen date navigation', () {
+    setUp(() => SharedPreferences.setMockInitialValues({}));
+
+    testWidgets('date text is rendered with underline decoration', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+      await tester.pumpAndSettle();
+
+      final underlined = tester.widgetList<Text>(find.byType(Text)).any(
+        (t) => t.style?.decoration == TextDecoration.underline,
+      );
+      expect(underlined, isTrue);
+    });
+
+    testWidgets('tapping date text opens DatePickerDialog', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+      await tester.pumpAndSettle();
+
+      final dateFinder = find.byWidgetPredicate(
+        (w) => w is Text && w.style?.decoration == TextDecoration.underline,
+      );
+      await tester.tap(dateFinder);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(DatePickerDialog), findsOneWidget);
+    });
+
+    testWidgets('cancelling date picker keeps original date', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+      await tester.pumpAndSettle();
+
+      final dateFinder = find.byWidgetPredicate(
+        (w) => w is Text && w.style?.decoration == TextDecoration.underline,
+      );
+      final original = (tester.widget<Text>(dateFinder)).data;
+
+      await tester.tap(dateFinder);
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Cancel'));
+      await tester.pumpAndSettle();
+
+      expect((tester.widget<Text>(dateFinder)).data, equals(original));
+    });
+
+    testWidgets('left arrow decrements date by one day', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+      await tester.pumpAndSettle();
+
+      final dateFinder = find.byWidgetPredicate(
+        (w) => w is Text && w.style?.decoration == TextDecoration.underline,
+      );
+      final before = (tester.widget<Text>(dateFinder)).data;
+
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+
+      expect((tester.widget<Text>(dateFinder)).data, isNot(equals(before)));
+    });
+
+    testWidgets('right arrow increments date by one day', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+      await tester.pumpAndSettle();
+
+      final dateFinder = find.byWidgetPredicate(
+        (w) => w is Text && w.style?.decoration == TextDecoration.underline,
+      );
+      final before = (tester.widget<Text>(dateFinder)).data;
+
+      await tester.tap(find.byIcon(Icons.chevron_right));
+      await tester.pumpAndSettle();
+
+      expect((tester.widget<Text>(dateFinder)).data, isNot(equals(before)));
+    });
+
+    testWidgets('Today button appears after navigating away and returns to today', (tester) async {
+      await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Today'), findsNothing);
+
+      await tester.tap(find.byIcon(Icons.chevron_left));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Today'), findsOneWidget);
+
+      await tester.tap(find.text('Today'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Today'), findsNothing);
     });
   });
 }
