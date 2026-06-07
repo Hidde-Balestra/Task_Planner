@@ -33,11 +33,78 @@ void main() {
     });
   });
 
+  group('Task - priority', () {
+    test('default priority is low', () {
+      final task = Task(title: 'Test', repeatDays: []);
+      expect(task.priority, equals(Priority.low));
+    });
+
+    test('priority can be set to medium', () {
+      final task =
+          Task(title: 'Test', repeatDays: [], priority: Priority.medium);
+      expect(task.priority, equals(Priority.medium));
+    });
+
+    test('priority can be set to high', () {
+      final task = Task(title: 'Test', repeatDays: [], priority: Priority.high);
+      expect(task.priority, equals(Priority.high));
+    });
+
+    test('priority serializes to name string', () {
+      final task = Task(title: 'T', repeatDays: [], priority: Priority.high);
+      expect(task.toMap()['priority'], equals('high'));
+    });
+
+    test('priority deserializes from name string', () {
+      final task = Task.fromMap({'title': 'T', 'repeatDays': <int>[], 'priority': 'medium'});
+      expect(task.priority, equals(Priority.medium));
+    });
+
+    test('missing priority defaults to low', () {
+      final task = Task.fromMap({'title': 'T', 'repeatDays': <int>[]});
+      expect(task.priority, equals(Priority.low));
+    });
+
+    test('unknown priority string defaults to low', () {
+      final task = Task.fromMap(
+          {'title': 'T', 'repeatDays': <int>[], 'priority': 'urgent'});
+      expect(task.priority, equals(Priority.low));
+    });
+
+    test('all priority values round-trip through map', () {
+      for (final p in Priority.values) {
+        final task = Task(title: 'T', repeatDays: [], priority: p);
+        final restored = Task.fromMap(task.toMap());
+        expect(restored.priority, equals(p));
+      }
+    });
+  });
+
+  group('Task - repeatIntervalDays', () {
+    test('default repeatIntervalDays is 0', () {
+      final task = Task(title: 'Test', repeatDays: []);
+      expect(task.repeatIntervalDays, equals(0));
+    });
+
+    test('repeatIntervalDays persists through serialization', () {
+      final task = Task(title: 'Test', repeatDays: [], repeatIntervalDays: 14);
+      final restored = Task.fromMap(task.toMap());
+      expect(restored.repeatIntervalDays, equals(14));
+    });
+
+    test('missing repeatIntervalDays defaults to 0', () {
+      final task = Task.fromMap({'title': 'T', 'repeatDays': <int>[]});
+      expect(task.repeatIntervalDays, equals(0));
+    });
+  });
+
   group('Task - serialization', () {
     test('toMap and fromMap round-trip preserves all fields', () {
       final original = Task(
         title: 'Test Task',
         repeatDays: [1, 3, 5],
+        priority: Priority.high,
+        repeatIntervalDays: 7,
         creationDate: DateTime(2024, 6, 15),
       );
       final date = DateTime(2024, 6, 15);
@@ -49,15 +116,19 @@ void main() {
       expect(restored.title, equals(original.title));
       expect(restored.repeatDays, equals(original.repeatDays));
       expect(restored.creationDate, equals(original.creationDate));
+      expect(restored.priority, equals(Priority.high));
+      expect(restored.repeatIntervalDays, equals(7));
       expect(restored.isCompleted(date), isTrue);
     });
 
     test('toJson and fromJson round-trip preserves all fields', () {
-      final original = Task(title: 'JSON Task', repeatDays: [0, 6]);
+      final original =
+          Task(title: 'JSON Task', repeatDays: [0, 6], priority: Priority.medium);
       final restored = Task.fromJson(original.toJson());
       expect(restored.id, equals(original.id));
       expect(restored.title, equals(original.title));
       expect(restored.repeatDays, equals(original.repeatDays));
+      expect(restored.priority, equals(Priority.medium));
     });
 
     test('fromMap with missing title falls back to Untitled Task', () {

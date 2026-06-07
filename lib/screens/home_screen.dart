@@ -41,6 +41,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     }
   }
 
+  bool get _isToday {
+    final now = DateTime.now();
+    return selectedDate.year == now.year &&
+        selectedDate.month == now.month &&
+        selectedDate.day == now.day;
+  }
+
   Future<void> _reloadFromDisk() async {
     try {
       final prefs = await SharedPreferences.getInstance();
@@ -88,9 +95,21 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     await prefs.setString('lastDate', selectedDate.toIso8601String());
   }
 
-  Future<void> _addTask(String title, List<int> repeatDays) async {
+  Future<void> _addTask(
+    String title,
+    List<int> repeatDays,
+    Priority priority,
+    int repeatIntervalDays,
+    DateTime creationDate,
+  ) async {
     setState(() {
-      tasks.add(Task(title: title, repeatDays: repeatDays));
+      tasks.add(Task(
+        title: title,
+        repeatDays: repeatDays,
+        priority: priority,
+        repeatIntervalDays: repeatIntervalDays,
+        creationDate: creationDate,
+      ));
     });
     await _saveTasks();
   }
@@ -108,10 +127,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       builder: (ctx) => AddTaskDialog(
         initialTitle: task.title,
         initialDays: task.repeatDays,
-        onAdd: (title, repeatDays) {
+        initialPriority: task.priority,
+        initialIntervalDays: task.repeatIntervalDays,
+        initialDate: task.creationDate,
+        onAdd: (title, repeatDays, priority, intervalDays, creationDate) {
           setState(() {
             task.title = title;
             task.repeatDays = repeatDays;
+            task.priority = priority;
+            task.repeatIntervalDays = intervalDays;
+            task.creationDate = creationDate;
           });
           _saveTasks();
         },
@@ -146,17 +171,13 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     _saveLastDate();
   }
 
-  List<Task> get _filteredTasks {
-    final weekday = selectedDate.weekday % 7;
-    return tasks.where((task) {
-      if (task.repeatDays.isEmpty) {
-        return task.creationDate.year == selectedDate.year &&
-            task.creationDate.month == selectedDate.month &&
-            task.creationDate.day == selectedDate.day;
-      }
-      return task.repeatDays.contains(weekday);
-    }).toList();
+  void _goToToday() {
+    setState(() => selectedDate = DateTime.now());
+    _saveLastDate();
   }
+
+  List<Task> get _filteredTasks =>
+      WidgetService.filterTasksForDate(tasks, selectedDate);
 
   Future<void> _handleMenuAction(String value) async {
     if (value == 'backup') {
@@ -204,6 +225,11 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       appBar: AppBar(
         title: const Text('Task Planner'),
         actions: [
+          if (!_isToday)
+            TextButton(
+              onPressed: _goToToday,
+              child: const Text('Today'),
+            ),
           IconButton(
             icon: const Icon(Icons.chevron_left),
             onPressed: () => _changeDay(-1),
@@ -254,7 +280,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       floatingActionButton: FloatingActionButton(
         onPressed: () => showDialog(
           context: context,
-          builder: (ctx) => AddTaskDialog(onAdd: _addTask),
+          builder: (ctx) => AddTaskDialog(
+            initialDate: selectedDate,
+            onAdd: _addTask,
+          ),
         ),
         child: const Icon(Icons.add),
       ),

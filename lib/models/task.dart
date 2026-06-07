@@ -1,11 +1,15 @@
 import 'dart:convert';
 
+enum Priority { low, medium, high }
+
 class Task {
   static int _counter = 0;
 
   final String id;
   String title;
   List<int> repeatDays; // 0 = Sunday ... 6 = Saturday
+  int repeatIntervalDays; // 0 = off; >0 = repeat every N days from creationDate
+  Priority priority;
   Map<String, bool> completedByDate;
   DateTime creationDate;
 
@@ -13,6 +17,8 @@ class Task {
     String? id,
     required this.title,
     required this.repeatDays,
+    this.repeatIntervalDays = 0,
+    this.priority = Priority.low,
     Map<String, bool>? completedByDate,
     DateTime? creationDate,
   })  : id = id ?? '${DateTime.now().microsecondsSinceEpoch}_${_counter++}',
@@ -36,6 +42,8 @@ class Task {
       'id': id,
       'title': title,
       'repeatDays': repeatDays,
+      'repeatIntervalDays': repeatIntervalDays,
+      'priority': priority.name,
       'creationDate': creationDate.toIso8601String(),
       'completedByDate': completedByDate,
     };
@@ -47,6 +55,11 @@ class Task {
     final repeatDays = map['repeatDays'] != null
         ? List<int>.from(map['repeatDays'] as List)
         : <int>[];
+    final repeatIntervalDays = (map['repeatIntervalDays'] as num?)?.toInt() ?? 0;
+    final priority = Priority.values.firstWhere(
+      (p) => p.name == map['priority'],
+      orElse: () => Priority.low,
+    );
     final creationDate = map['creationDate'] != null
         ? DateTime.tryParse(map['creationDate'] as String) ?? DateTime.now()
         : DateTime.now();
@@ -63,6 +76,8 @@ class Task {
       id: id,
       title: title,
       repeatDays: repeatDays,
+      repeatIntervalDays: repeatIntervalDays,
+      priority: priority,
       creationDate: creationDate,
       completedByDate: completedByDateSafe,
     );

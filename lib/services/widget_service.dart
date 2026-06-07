@@ -9,14 +9,26 @@ class WidgetService {
   static const String _androidName = 'TaskWidgetProvider';
 
   static List<Task> filterTasksForDate(List<Task> tasks, DateTime date) {
+    final targetDay =
+        DateTime(date.year, date.month, date.day);
     final weekday = date.weekday % 7;
+
     return tasks.where((task) {
-      if (task.repeatDays.isEmpty) {
-        return task.creationDate.year == date.year &&
-            task.creationDate.month == date.month &&
-            task.creationDate.day == date.day;
+      if (task.repeatIntervalDays > 0) {
+        final start = DateTime(
+          task.creationDate.year,
+          task.creationDate.month,
+          task.creationDate.day,
+        );
+        final diff = targetDay.difference(start).inDays;
+        return diff >= 0 && diff % task.repeatIntervalDays == 0;
       }
-      return task.repeatDays.contains(weekday);
+      if (task.repeatDays.isNotEmpty) {
+        return task.repeatDays.contains(weekday);
+      }
+      return task.creationDate.year == date.year &&
+          task.creationDate.month == date.month &&
+          task.creationDate.day == date.day;
     }).toList();
   }
 
