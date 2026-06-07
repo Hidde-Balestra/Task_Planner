@@ -42,6 +42,7 @@ class WidgetService {
             'id': t.id,
             'title': t.title,
             'done': t.isCompleted(date),
+            'priority': t.priority.name,
           },
         )
         .toList();

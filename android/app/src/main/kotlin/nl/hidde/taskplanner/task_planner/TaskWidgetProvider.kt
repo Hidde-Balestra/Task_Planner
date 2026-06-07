@@ -26,6 +26,12 @@ class TaskWidgetProvider : HomeWidgetProvider() {
         Triple(R.id.task_row_4, R.id.task_check_4, R.id.task_title_4),
     )
 
+    private fun priorityColor(priority: String): Int = when (priority) {
+        "medium" -> 0xFFFF9800.toInt()
+        "high" -> 0xFFF44336.toInt()
+        else -> 0xFF4CAF50.toInt()
+    }
+
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
@@ -47,6 +53,8 @@ class TaskWidgetProvider : HomeWidgetProvider() {
                     val taskId = task.getString("id")
                     val title = task.getString("title")
                     val done = task.getBoolean("done")
+                    val priority = task.optString("priority", "low")
+                    val color = priorityColor(priority)
 
                     views.setViewVisibility(rowId, View.VISIBLE)
                     val titleText = SpannableString(title)
@@ -63,6 +71,7 @@ class TaskWidgetProvider : HomeWidgetProvider() {
                         checkId,
                         if (done) R.drawable.widget_check_done else R.drawable.widget_check_todo,
                     )
+                    views.setInt(checkId, "setColorFilter", color)
 
                     val toggleUri = Uri.parse("taskplanner://toggle?id=$taskId&date=$today")
                     val pendingIntent = HomeWidgetBackgroundIntent.getBroadcast(context, toggleUri)
