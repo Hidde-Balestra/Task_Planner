@@ -1,20 +1,21 @@
 import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
-import 'package:home_widget/home_widget.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/task.dart';
 
 class WidgetService {
-  static const _androidWidgetName = 'TaskWidgetProvider';
+  static const _channel = MethodChannel('nl.hidde.taskplanner/widget');
 
   static Future<void> updateWidget(List<Task> tasks, DateTime date) async {
     try {
-      final data = buildTaskData(tasks, date);
-      await HomeWidget.saveWidgetData<String>('today_tasks', jsonEncode(data));
-      await HomeWidget.saveWidgetData<String>('date_label', _formatDate(date));
-      await HomeWidget.updateWidget(androidName: _androidWidgetName);
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('today_tasks', jsonEncode(buildTaskData(tasks, date)));
+      await prefs.setString('date_label', _formatDate(date));
+      await _channel.invokeMethod('updateWidget');
     } catch (e) {
       debugPrint('Widget update failed: $e');
     }

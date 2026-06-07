@@ -19,7 +19,7 @@ class TaskWidgetProvider : AppWidgetProvider() {
     override fun onUpdate(
         context: Context,
         appWidgetManager: AppWidgetManager,
-        appWidgetIds: IntArray
+        appWidgetIds: IntArray,
     ) {
         for (id in appWidgetIds) {
             try {
@@ -65,13 +65,17 @@ class TaskWidgetProvider : AppWidgetProvider() {
             }
         }
 
-        fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
-            // home_widget writes today_tasks + date_label to HomeWidgetPreferences via saveWidgetData()
-            val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
-            val tasksJson = prefs.getString("today_tasks", "[]") ?: "[]"
+        fun updateWidget(
+            context: Context,
+            appWidgetManager: AppWidgetManager,
+            appWidgetId: Int,
+        ) {
+            // Flutter writes today_tasks + date_label via shared_preferences (WidgetService.updateWidget)
+            val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+            val tasksJson = prefs.getString("flutter.today_tasks", "[]") ?: "[]"
             val fallbackDate = SimpleDateFormat("E, MMM d", Locale.getDefault())
                 .format(Calendar.getInstance().time)
-            val dateLabel = prefs.getString("date_label", fallbackDate) ?: fallbackDate
+            val dateLabel = prefs.getString("flutter.date_label", fallbackDate) ?: fallbackDate
 
             val views = RemoteViews(context.packageName, R.layout.task_widget)
             views.setTextViewText(R.id.widget_date, dateLabel)
@@ -128,16 +132,19 @@ class TaskWidgetProvider : AppWidgetProvider() {
                 views.setViewVisibility(R.id.widget_more, View.GONE)
             }
 
-            val openIntent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
-            }
             val openFlags = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S)
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
             else
                 PendingIntent.FLAG_UPDATE_CURRENT
             views.setOnClickPendingIntent(
                 R.id.widget_open_app,
-                PendingIntent.getActivity(context, appWidgetId, openIntent, openFlags)
+                PendingIntent.getActivity(
+                    context, appWidgetId,
+                    Intent(context, MainActivity::class.java).apply {
+                        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+                    },
+                    openFlags
+                )
             )
 
             appWidgetManager.updateAppWidget(appWidgetId, views)

@@ -1,18 +1,14 @@
-name: Flutter CI/CD
+name: Flutter CI
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   pull_request:
-    branches: [ "main" ]
+    branches: ["main"]
 
 jobs:
-
-  # 1️⃣ Dart analysis + tests
-  dart-analyze-test:
+  ci:
     runs-on: ubuntu-latest
-    env:
-      FLUTTER_ARCH: x64
     steps:
       - uses: actions/checkout@v4
 
@@ -24,54 +20,8 @@ jobs:
       - name: Install dependencies
         run: flutter pub get
 
-      - name: Run Dart analysis
+      - name: Analyze
         run: flutter analyze
 
-#      - name: Run tests
-#        run: flutter test --coverage
-
-  # 2️⃣ Android build
-  android-build:
-    runs-on: ubuntu-latest
-    needs: dart-analyze-test
-    env:
-      FLUTTER_ARCH: x64
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.32.3"
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build APK
-        run: flutter build apk --release
-
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release.apk
-          path: build/app/outputs/flutter-apk/app-release.apk
-
-  # 3️⃣ iOS build
-  ios-build:
-    runs-on: macos-latest
-    needs: dart-analyze-test
-    env:
-      FLUTTER_ARCH: x64
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Flutter
-        uses: subosito/flutter-action@v2
-        with:
-          flutter-version: "3.32.3"
-
-      - name: Install dependencies
-        run: flutter pub get
-
-      - name: Build iOS
-        run: flutter build ios --release --no-codesign
+      - name: Test
+        run: flutter test

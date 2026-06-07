@@ -21,15 +21,15 @@ class TaskToggleReceiver : BroadcastReceiver() {
         if (intent.action != ACTION_TOGGLE) return
         val taskId = intent.getStringExtra("task_id") ?: return
 
-        try { toggleInHomeWidgetPrefs(context, taskId) } catch (_: Exception) {}
-        try { syncToFlutterPrefs(context, taskId) } catch (_: Exception) {}
+        try { toggleInWidgetPrefs(context, taskId) } catch (_: Exception) {}
+        try { syncToFlutterTasks(context, taskId) } catch (_: Exception) {}
         TaskWidgetProvider.updateAllWidgets(context)
     }
 
-    // Toggle in HomeWidgetPreferences so the widget immediately reflects the change.
-    private fun toggleInHomeWidgetPrefs(context: Context, taskId: String) {
-        val prefs = context.getSharedPreferences("HomeWidgetPreferences", Context.MODE_PRIVATE)
-        val json = prefs.getString("today_tasks", "[]") ?: "[]"
+    // Toggle the completed flag in flutter.today_tasks so the widget immediately reflects the change.
+    private fun toggleInWidgetPrefs(context: Context, taskId: String) {
+        val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+        val json = prefs.getString("flutter.today_tasks", "[]") ?: "[]"
         val arr = JSONArray(json)
         for (i in 0 until arr.length()) {
             val obj = arr.getJSONObject(i)
@@ -38,19 +38,17 @@ class TaskToggleReceiver : BroadcastReceiver() {
                 break
             }
         }
-        prefs.edit().putString("today_tasks", arr.toString()).apply()
+        prefs.edit().putString("flutter.today_tasks", arr.toString()).apply()
     }
 
-    // Mirror the toggle into Flutter's SharedPreferences so the app sees the
-    // change when it resumes and calls prefs.reload().
-    private fun syncToFlutterPrefs(context: Context, taskId: String) {
+    // Mirror the toggle into flutter.tasks so the app sees the change on resume (prefs.reload()).
+    private fun syncToFlutterTasks(context: Context, taskId: String) {
         val cal = Calendar.getInstance()
         val dateKey = "${cal.get(Calendar.YEAR)}-${cal.get(Calendar.MONTH) + 1}-${cal.get(Calendar.DAY_OF_MONTH)}"
 
-        val flutterPrefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
+        val prefs = context.getSharedPreferences("FlutterSharedPreferences", Context.MODE_PRIVATE)
 
-        // Read — handle both StringSet (pre-2.x) and String (2.x+) storage formats.
-        val raw = flutterPrefs.all["flutter.tasks"]
+        val raw = prefs.all["flutter.tasks"]
         val taskStrings: List<String> = when (raw) {
             is Set<*> -> raw.filterIsInstance<String>()
             is String -> {
@@ -76,8 +74,7 @@ class TaskToggleReceiver : BroadcastReceiver() {
             } catch (_: Exception) { jsonStr }
         }
 
-        // Write back in Flutter 2.x format (prefix + JSON array).
-        flutterPrefs.edit()
+        prefs.edit()
             .putString("flutter.tasks", FLUTTER_LIST_PREFIX + JSONArray(updated).toString())
             .apply()
     }
