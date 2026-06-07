@@ -5,6 +5,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models/task.dart';
 import '../services/backup_service.dart';
 import '../services/task_storage.dart';
+import '../services/widget_service.dart';
 import '../widgets/add_task_dialog.dart';
 import '../widgets/task_tile.dart';
 
@@ -56,6 +57,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       if (mounted) {
         setState(() => tasks = loadedTasks);
       }
+      await WidgetService.updateWidget(loadedTasks, DateTime.now());
     } catch (e) {
       debugPrint('Failed to load tasks: $e');
     }
@@ -63,6 +65,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
 
   Future<void> _saveTasks() async {
     await TaskStorage.saveTasks(tasks);
+    await WidgetService.updateWidget(tasks, DateTime.now());
   }
 
   Future<void> _loadLastDate() async {
