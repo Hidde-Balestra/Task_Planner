@@ -56,7 +56,10 @@ class TaskTile extends StatelessWidget {
           task.title,
           style: TextStyle(
             decoration: completed ? TextDecoration.lineThrough : null,
-            color: Theme.of(context).colorScheme.onSurface,
+            decorationThickness: 2.0,
+            color: completed
+                ? Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45)
+                : Theme.of(context).colorScheme.onSurface,
           ),
         ),
         trailing: Checkbox(

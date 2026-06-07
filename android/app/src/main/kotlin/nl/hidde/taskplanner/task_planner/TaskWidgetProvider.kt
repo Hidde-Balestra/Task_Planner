@@ -4,6 +4,9 @@ import android.appwidget.AppWidgetManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.net.Uri
+import android.text.SpannableString
+import android.text.Spanned
+import android.text.style.StrikethroughSpan
 import android.view.View
 import android.widget.RemoteViews
 import es.antonborri.home_widget.HomeWidgetBackgroundIntent
@@ -46,7 +49,16 @@ class TaskWidgetProvider : HomeWidgetProvider() {
                     val done = task.getBoolean("done")
 
                     views.setViewVisibility(rowId, View.VISIBLE)
-                    views.setTextViewText(titleId, title)
+                    val titleText = SpannableString(title)
+                    if (done) {
+                        titleText.setSpan(
+                            StrikethroughSpan(),
+                            0,
+                            title.length,
+                            Spanned.SPAN_EXCLUSIVE_EXCLUSIVE,
+                        )
+                    }
+                    views.setTextViewText(titleId, titleText)
                     views.setImageViewResource(
                         checkId,
                         if (done) R.drawable.widget_check_done else R.drawable.widget_check_todo,
