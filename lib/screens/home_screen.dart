@@ -8,6 +8,7 @@ import '../services/task_storage.dart';
 import '../services/widget_service.dart';
 import '../widgets/add_task_dialog.dart';
 import '../widgets/task_tile.dart';
+import 'overview_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -148,20 +149,105 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     return await showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Delete Task'),
-        content: const Text('Are you sure you want to delete this task?'),
+        title: const Text('Taak verwijderen'),
+        content: const Text('Weet je zeker dat je deze taak wilt verwijderen?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel'),
+            child: const Text('Annuleren'),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Delete'),
+            child: const Text('Verwijderen'),
           ),
         ],
       ),
     );
+  }
+
+  /// Shows the postpone bottom sheet and returns the chosen date, or null if cancelled.
+  Future<DateTime?> _showPostponeSheet() async {
+    final from = selectedDate;
+    final tomorrow = from.add(const Duration(days: 1));
+    final dayAfter = from.add(const Duration(days: 2));
+    final nextWeek = from.add(const Duration(days: 7));
+
+    final result = await showModalBottomSheet<Object>(
+      context: context,
+      builder: (ctx) => SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                child: Text(
+                  'Uitstellen naar…',
+                  style: Theme.of(ctx).textTheme.titleMedium,
+                ),
+              ),
+              ListTile(
+                leading: const Icon(Icons.today),
+                title: const Text('Morgen'),
+                subtitle: Text(DateFormat('E, MMM d').format(tomorrow)),
+                onTap: () => Navigator.pop(ctx, tomorrow),
+              ),
+              ListTile(
+                leading: const Icon(Icons.event),
+                title: const Text('Overmorgen'),
+                subtitle: Text(DateFormat('E, MMM d').format(dayAfter)),
+                onTap: () => Navigator.pop(ctx, dayAfter),
+              ),
+              ListTile(
+                leading: const Icon(Icons.date_range),
+                title: const Text('Volgende week'),
+                subtitle: Text(DateFormat('E, MMM d').format(nextWeek)),
+                onTap: () => Navigator.pop(ctx, nextWeek),
+              ),
+              ListTile(
+                leading: const Icon(Icons.calendar_month),
+                title: const Text('Kies datum…'),
+                onTap: () => Navigator.pop(ctx, 'custom'),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+
+    if (result == 'custom') {
+      if (!mounted) return null;
+      return showDatePicker(
+        context: context,
+        initialDate: tomorrow,
+        firstDate: tomorrow,
+        lastDate: DateTime(2030),
+      );
+    }
+
+    return result as DateTime?;
+  }
+
+  /// Called from TaskTile right-swipe. Returns true if the task was postponed.
+  Future<bool> _postponeTask(Task task) async {
+    final newDate = await _showPostponeSheet();
+    if (newDate == null) return false;
+    setState(() {
+      task.postponeTo(selectedDate, newDate);
+    });
+    await _saveTasks();
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Uitgesteld naar ${DateFormat('E, MMM d').format(newDate)}',
+          ),
+        ),
+      );
+    }
+    return true;
   }
 
   void _changeDay(int offset) {
@@ -261,6 +347,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             icon: const Icon(Icons.chevron_right),
             onPressed: () => _changeDay(1),
           ),
+          IconButton(
+            icon: const Icon(Icons.list_alt),
+            tooltip: 'Overzicht',
+            onPressed: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => OverviewScreen(tasks: tasks),
+              ),
+            ),
+          ),
           PopupMenuButton<String>(
             onSelected: _handleMenuAction,
             itemBuilder: (context) => const [
@@ -271,7 +367,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         ],
       ),
       body: _filteredTasks.isEmpty
-          ? const Center(child: Text('No tasks for this day'))
+          ? const Center(child: Text('Geen taken voor deze dag'))
           : ListView.builder(
               itemCount: _filteredTasks.length,
               itemBuilder: (context, index) {
@@ -281,6 +377,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
                   date: selectedDate,
                   onToggle: () => _toggleTask(task),
                   onEdit: () => _editTask(task),
+                  onPostpone: () => _postponeTask(task),
                   onDelete: () async {
                     final confirm = await _confirmDelete();
                     if (confirm == true) {

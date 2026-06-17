@@ -187,4 +187,64 @@ void main() {
       expect(ids.toSet().length, equals(ids.length));
     });
   });
+
+  group('Task - postpone', () {
+    test('isPostponedOnDate returns false by default', () {
+      final task = Task(title: 'Test', repeatDays: []);
+      expect(task.isPostponedOnDate(DateTime(2024, 6, 15)), isFalse);
+    });
+
+    test('postponeTo marks the from-date as postponed', () {
+      final task = Task(title: 'Test', repeatDays: []);
+      final from = DateTime(2024, 6, 15);
+      final to = DateTime(2024, 6, 16);
+      task.postponeTo(from, to);
+      expect(task.isPostponedOnDate(from), isTrue);
+    });
+
+    test('postponeTo stores the correct target date key', () {
+      final task = Task(title: 'Test', repeatDays: []);
+      final from = DateTime(2024, 6, 15);
+      final to = DateTime(2024, 6, 22);
+      task.postponeTo(from, to);
+      expect(task.postponedDates['2024-6-15'], equals('2024-6-22'));
+    });
+
+    test('isPostponedOnDate returns false for the target date', () {
+      final task = Task(title: 'Test', repeatDays: []);
+      final from = DateTime(2024, 6, 15);
+      final to = DateTime(2024, 6, 16);
+      task.postponeTo(from, to);
+      expect(task.isPostponedOnDate(to), isFalse);
+    });
+
+    test('multiple postpones on different dates are tracked independently', () {
+      final task = Task(title: 'Test', repeatDays: [1, 2, 3, 4, 5]);
+      final mon = DateTime(2024, 6, 10);
+      final tue = DateTime(2024, 6, 11);
+      task.postponeTo(mon, DateTime(2024, 6, 17));
+      expect(task.isPostponedOnDate(mon), isTrue);
+      expect(task.isPostponedOnDate(tue), isFalse);
+    });
+
+    test('postponedDates survives toMap/fromMap round-trip', () {
+      final task = Task(title: 'Test', repeatDays: []);
+      task.postponeTo(DateTime(2024, 6, 15), DateTime(2024, 6, 16));
+      final restored = Task.fromMap(task.toMap());
+      expect(restored.postponedDates['2024-6-15'], equals('2024-6-16'));
+      expect(restored.isPostponedOnDate(DateTime(2024, 6, 15)), isTrue);
+    });
+
+    test('postponedDates survives toJson/fromJson round-trip', () {
+      final task = Task(title: 'Test', repeatDays: []);
+      task.postponeTo(DateTime(2024, 6, 10), DateTime(2024, 6, 17));
+      final restored = Task.fromJson(task.toJson());
+      expect(restored.postponedDates['2024-6-10'], equals('2024-6-17'));
+    });
+
+    test('missing postponedDates in map defaults to empty', () {
+      final task = Task.fromMap({'title': 'T', 'repeatDays': <int>[]});
+      expect(task.postponedDates, isEmpty);
+    });
+  });
 }

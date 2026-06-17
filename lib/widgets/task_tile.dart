@@ -14,6 +14,8 @@ class TaskTile extends StatelessWidget {
   final VoidCallback onToggle;
   final VoidCallback onEdit;
   final Future<bool?> Function()? onDelete;
+  // Returns true when the task was successfully postponed (tile should dismiss)
+  final Future<bool> Function()? onPostpone;
 
   const TaskTile({
     super.key,
@@ -22,6 +24,7 @@ class TaskTile extends StatelessWidget {
     required this.onToggle,
     required this.onEdit,
     this.onDelete,
+    this.onPostpone,
   });
 
   @override
@@ -30,13 +33,20 @@ class TaskTile extends StatelessWidget {
 
     return Dismissible(
       key: Key(task.id),
-      confirmDismiss: (direction) async => onDelete?.call(),
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.startToEnd) {
+          return await onPostpone?.call() ?? false;
+        }
+        return await onDelete?.call();
+      },
+      // Right-swipe: postpone
       background: Container(
-        color: Colors.red,
+        color: Colors.indigo,
         alignment: Alignment.centerLeft,
         padding: const EdgeInsets.only(left: 20),
-        child: const Icon(Icons.delete, color: Colors.white),
+        child: const Icon(Icons.schedule, color: Colors.white),
       ),
+      // Left-swipe: delete
       secondaryBackground: Container(
         color: Colors.red,
         alignment: Alignment.centerRight,

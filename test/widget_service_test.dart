@@ -164,6 +164,72 @@ void main() {
     });
   });
 
+  group('WidgetService.filterTasksForDate - postponed tasks', () {
+    test('one-time task does not appear on original date after postpone', () {
+      final date = DateTime(2024, 6, 10);
+      final task = Task(title: 'One-time', repeatDays: [], creationDate: date);
+      task.postponeTo(date, DateTime(2024, 6, 11));
+      expect(WidgetService.filterTasksForDate([task], date), isEmpty);
+    });
+
+    test('one-time task appears on postponed-to date', () {
+      final original = DateTime(2024, 6, 10);
+      final newDate = DateTime(2024, 6, 11);
+      final task = Task(title: 'One-time', repeatDays: [], creationDate: original);
+      task.postponeTo(original, newDate);
+      expect(WidgetService.filterTasksForDate([task], newDate), contains(task));
+    });
+
+    test('weekly task does not appear on the postponed occurrence date', () {
+      final monday = DateTime(2024, 6, 10); // Monday weekday=1
+      final task = Task(title: 'Weekly', repeatDays: [1]);
+      task.postponeTo(monday, DateTime(2024, 6, 11));
+      expect(WidgetService.filterTasksForDate([task], monday), isEmpty);
+    });
+
+    test('weekly task still appears on other (non-postponed) occurrences', () {
+      final monday1 = DateTime(2024, 6, 10);
+      final monday2 = DateTime(2024, 6, 17);
+      final task = Task(title: 'Weekly', repeatDays: [1]);
+      task.postponeTo(monday1, DateTime(2024, 6, 11));
+      // Next Monday should still appear
+      expect(WidgetService.filterTasksForDate([task], monday2), contains(task));
+    });
+
+    test('weekly task postponed to a non-occurrence date appears there', () {
+      final monday = DateTime(2024, 6, 10);
+      final wednesday = DateTime(2024, 6, 12);
+      final task = Task(title: 'Weekly', repeatDays: [1]);
+      task.postponeTo(monday, wednesday);
+      expect(WidgetService.filterTasksForDate([task], wednesday), contains(task));
+    });
+
+    test('interval task does not appear on postponed date', () {
+      final start = DateTime(2024, 6, 10);
+      final task = Task(
+        title: 'Interval',
+        repeatDays: [],
+        repeatIntervalDays: 7,
+        creationDate: start,
+      );
+      task.postponeTo(start, DateTime(2024, 6, 11));
+      expect(WidgetService.filterTasksForDate([task], start), isEmpty);
+    });
+
+    test('interval task appears on postponed-to date', () {
+      final start = DateTime(2024, 6, 10);
+      final newDate = DateTime(2024, 6, 13);
+      final task = Task(
+        title: 'Interval',
+        repeatDays: [],
+        repeatIntervalDays: 7,
+        creationDate: start,
+      );
+      task.postponeTo(start, newDate);
+      expect(WidgetService.filterTasksForDate([task], newDate), contains(task));
+    });
+  });
+
   group('WidgetService.buildWidgetData', () {
     test('returns correct structure for a task', () {
       final date = DateTime(2024, 6, 10); // Monday

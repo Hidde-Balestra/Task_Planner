@@ -12,6 +12,8 @@ class Task {
   Priority priority;
   Map<String, bool> completedByDate;
   DateTime creationDate;
+  // Maps original date key → postponed-to date key
+  Map<String, String> postponedDates;
 
   Task({
     String? id,
@@ -21,9 +23,11 @@ class Task {
     this.priority = Priority.low,
     Map<String, bool>? completedByDate,
     DateTime? creationDate,
+    Map<String, String>? postponedDates,
   })  : id = id ?? '${DateTime.now().microsecondsSinceEpoch}_${_counter++}',
         completedByDate = completedByDate ?? {},
-        creationDate = creationDate ?? DateTime.now();
+        creationDate = creationDate ?? DateTime.now(),
+        postponedDates = postponedDates ?? {};
 
   bool isCompleted(DateTime date) {
     final key = _dateKey(date);
@@ -33,6 +37,13 @@ class Task {
   void toggleCompletion(DateTime date) {
     final key = _dateKey(date);
     completedByDate[key] = !(completedByDate[key] ?? false);
+  }
+
+  bool isPostponedOnDate(DateTime date) =>
+      postponedDates.containsKey(_dateKey(date));
+
+  void postponeTo(DateTime fromDate, DateTime toDate) {
+    postponedDates[_dateKey(fromDate)] = _dateKey(toDate);
   }
 
   String _dateKey(DateTime date) => '${date.year}-${date.month}-${date.day}';
@@ -46,6 +57,7 @@ class Task {
       'priority': priority.name,
       'creationDate': creationDate.toIso8601String(),
       'completedByDate': completedByDate,
+      'postponedDates': postponedDates,
     };
   }
 
@@ -72,6 +84,16 @@ class Task {
       });
     }
 
+    final rawPostponed = map['postponedDates'];
+    final postponedDatesSafe = <String, String>{};
+    if (rawPostponed is Map) {
+      rawPostponed.forEach((key, value) {
+        if (value != null) {
+          postponedDatesSafe[key.toString()] = value.toString();
+        }
+      });
+    }
+
     return Task(
       id: id,
       title: title,
@@ -80,6 +102,7 @@ class Task {
       priority: priority,
       creationDate: creationDate,
       completedByDate: completedByDateSafe,
+      postponedDates: postponedDatesSafe,
     );
   }
 

@@ -9,11 +9,15 @@ class WidgetService {
   static const String _androidName = 'TaskWidgetProvider';
 
   static List<Task> filterTasksForDate(List<Task> tasks, DateTime date) {
-    final targetDay =
-        DateTime(date.year, date.month, date.day);
+    final targetDay = DateTime(date.year, date.month, date.day);
+    final dateKey = '${date.year}-${date.month}-${date.day}';
     final weekday = date.weekday % 7;
 
     return tasks.where((task) {
+      // Postponed away from this date — never show here
+      if (task.postponedDates.containsKey(dateKey)) return false;
+
+      bool naturallyAppears;
       if (task.repeatIntervalDays > 0) {
         final start = DateTime(
           task.creationDate.year,
@@ -21,14 +25,19 @@ class WidgetService {
           task.creationDate.day,
         );
         final diff = targetDay.difference(start).inDays;
-        return diff >= 0 && diff % task.repeatIntervalDays == 0;
+        naturallyAppears = diff >= 0 && diff % task.repeatIntervalDays == 0;
+      } else if (task.repeatDays.isNotEmpty) {
+        naturallyAppears = task.repeatDays.contains(weekday);
+      } else {
+        naturallyAppears = task.creationDate.year == date.year &&
+            task.creationDate.month == date.month &&
+            task.creationDate.day == date.day;
       }
-      if (task.repeatDays.isNotEmpty) {
-        return task.repeatDays.contains(weekday);
-      }
-      return task.creationDate.year == date.year &&
-          task.creationDate.month == date.month &&
-          task.creationDate.day == date.day;
+
+      if (naturallyAppears) return true;
+
+      // Postponed to this date from another date
+      return task.postponedDates.containsValue(dateKey);
     }).toList();
   }
 
