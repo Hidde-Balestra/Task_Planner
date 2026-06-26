@@ -14,6 +14,8 @@ class Task {
   DateTime creationDate;
   // Maps original date key → postponed-to date key
   Map<String, String> postponedDates;
+  // "HH:mm" deadline time; null means no deadline
+  String? dueTime;
 
   Task({
     String? id,
@@ -24,6 +26,7 @@ class Task {
     Map<String, bool>? completedByDate,
     DateTime? creationDate,
     Map<String, String>? postponedDates,
+    this.dueTime,
   })  : id = id ?? '${DateTime.now().microsecondsSinceEpoch}_${_counter++}',
         completedByDate = completedByDate ?? {},
         creationDate = creationDate ?? DateTime.now(),
@@ -58,6 +61,7 @@ class Task {
       'creationDate': creationDate.toIso8601String(),
       'completedByDate': completedByDate,
       'postponedDates': postponedDates,
+      if (dueTime != null) 'dueTime': dueTime,
     };
   }
 
@@ -94,6 +98,8 @@ class Task {
       });
     }
 
+    final dueTime = map['dueTime'] as String?;
+
     return Task(
       id: id,
       title: title,
@@ -103,6 +109,7 @@ class Task {
       creationDate: creationDate,
       completedByDate: completedByDateSafe,
       postponedDates: postponedDatesSafe,
+      dueTime: dueTime,
     );
   }
 

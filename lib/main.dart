@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 
 import 'screens/home_screen.dart';
+import 'services/notification_service.dart';
 import 'services/task_storage.dart';
 import 'services/widget_service.dart';
 
@@ -29,6 +30,8 @@ Future<void> backgroundCallback(Uri? uri) async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await HomeWidget.registerInteractivityCallback(backgroundCallback);
+  await NotificationService.initialize();
+  await NotificationService.requestPermissions();
   runApp(const TaskPlannerApp());
 }
 

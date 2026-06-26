@@ -8,7 +8,7 @@ import 'package:task_planner/widgets/task_tile.dart';
 
 Widget _wrap(Widget child) => MaterialApp(home: Scaffold(body: child));
 
-void _noop(String t, List<int> d, Priority p, int i, DateTime dt) {}
+void _noop(String t, List<int> d, Priority p, int i, DateTime dt, String? time) {}
 
 void main() {
   group('AddTaskDialog', () {
@@ -39,7 +39,7 @@ void main() {
       var called = false;
       await tester.pumpWidget(_wrap(
         AddTaskDialog(
-          onAdd: (t, d, p, i, dt) => called = true,
+          onAdd: (t, d, p, i, dt, time) => called = true,
         ),
       ));
       await tester.tap(find.text('Add'));
@@ -54,7 +54,7 @@ void main() {
 
       await tester.pumpWidget(_wrap(
         AddTaskDialog(
-          onAdd: (title, days, p, i, dt) {
+          onAdd: (title, days, p, i, dt, time) {
             capturedTitle = title;
             capturedDays = days;
           },
@@ -101,7 +101,7 @@ void main() {
               onPressed: () => showDialog(
                 context: ctx,
                 builder: (_) => AddTaskDialog(
-                  onAdd: (t, d, p, i, dt) => called = true,
+                  onAdd: (t, d, p, i, dt, time) => called = true,
                 ),
               ),
               child: const Text('Open'),
@@ -129,7 +129,7 @@ void main() {
     testWidgets('selecting High priority passes it to onAdd', (tester) async {
       Priority? captured;
       await tester.pumpWidget(_wrap(
-        AddTaskDialog(onAdd: (t, d, p, i, dt) => captured = p),
+        AddTaskDialog(onAdd: (t, d, p, i, dt, time) => captured = p),
       ));
       await tester.enterText(find.byType(TextField).first, 'Task');
       await tester.tap(find.text('High'));
@@ -143,7 +143,7 @@ void main() {
         (tester) async {
       int? capturedInterval;
       await tester.pumpWidget(_wrap(
-        AddTaskDialog(onAdd: (t, d, p, i, dt) => capturedInterval = i),
+        AddTaskDialog(onAdd: (t, d, p, i, dt, time) => capturedInterval = i),
       ));
       await tester.enterText(find.byType(TextField).first, 'Task');
       await tester.tap(find.text('Interval'));
@@ -163,7 +163,7 @@ void main() {
       int? capturedInterval;
       await tester.pumpWidget(_wrap(
         AddTaskDialog(
-          onAdd: (t, d, p, i, dt) {
+          onAdd: (t, d, p, i, dt, time) {
             capturedDays = d;
             capturedInterval = i;
           },
@@ -183,6 +183,59 @@ void main() {
       ));
       // In "Once" mode, the date button should show 'Mon, Jun 10'
       expect(find.textContaining('Jun 10'), findsOneWidget);
+    });
+
+    testWidgets('shows "Geen deadline" button when no dueTime set', (tester) async {
+      await tester.pumpWidget(_wrap(AddTaskDialog(onAdd: _noop)));
+      expect(find.text('Geen deadline'), findsOneWidget);
+    });
+
+    testWidgets('initialDueTime pre-fills the time shown', (tester) async {
+      await tester.pumpWidget(_wrap(
+        AddTaskDialog(initialDueTime: '14:30', onAdd: _noop),
+      ));
+      expect(find.text('14:30'), findsOneWidget);
+      expect(find.text('Geen deadline'), findsNothing);
+    });
+
+    testWidgets('onAdd receives null dueTime when no time is set', (tester) async {
+      String? capturedTime = 'sentinel';
+      await tester.pumpWidget(_wrap(
+        AddTaskDialog(
+          onAdd: (t, d, p, i, dt, time) => capturedTime = time,
+        ),
+      ));
+      await tester.enterText(find.byType(TextField).first, 'Task');
+      await tester.tap(find.text('Add'));
+      await tester.pump();
+      expect(capturedTime, isNull);
+    });
+
+    testWidgets('onAdd receives dueTime string when initialDueTime provided', (tester) async {
+      String? capturedTime;
+      await tester.pumpWidget(_wrap(
+        AddTaskDialog(
+          initialDueTime: '09:00',
+          onAdd: (t, d, p, i, dt, time) => capturedTime = time,
+        ),
+      ));
+      await tester.enterText(find.byType(TextField).first, 'Task');
+      await tester.tap(find.text('Add'));
+      await tester.pump();
+      expect(capturedTime, equals('09:00'));
+    });
+
+    testWidgets('close button clears the dueTime and shows "Geen deadline"', (tester) async {
+      await tester.pumpWidget(_wrap(
+        AddTaskDialog(initialDueTime: '10:00', onAdd: _noop),
+      ));
+      // Initially the time is shown
+      expect(find.text('10:00'), findsOneWidget);
+      // Tap the close/clear button
+      await tester.tap(find.byIcon(Icons.close));
+      await tester.pump();
+      expect(find.text('Geen deadline'), findsOneWidget);
+      expect(find.text('10:00'), findsNothing);
     });
   });
 
@@ -287,6 +340,32 @@ void main() {
             d.color == const Color(0xFFF44336);
       });
       expect(redDot, isTrue);
+    });
+
+    testWidgets('shows dueTime as subtitle when task has dueTime', (tester) async {
+      final taskWithTime = Task(
+        title: 'Timed task',
+        repeatDays: [1],
+        dueTime: '15:00',
+      );
+      await tester.pumpWidget(_wrap(
+        TaskTile(task: taskWithTime, date: date, onToggle: () {}, onEdit: () {}),
+      ));
+      expect(find.text('15:00'), findsOneWidget);
+    });
+
+    testWidgets('does not show subtitle when task has no dueTime', (tester) async {
+      await tester.pumpWidget(_wrap(
+        TaskTile(task: task, date: date, onToggle: () {}, onEdit: () {}),
+      ));
+      // No time text should appear in the tile
+      expect(find.byType(Text), findsWidgets);
+      final texts = tester.widgetList<Text>(find.byType(Text));
+      final hasTimeText = texts.any((t) {
+        final data = t.data ?? '';
+        return RegExp(r'^\d{2}:\d{2}$').hasMatch(data);
+      });
+      expect(hasTimeText, isFalse);
     });
   });
 

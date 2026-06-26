@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/task.dart';
 import '../services/backup_service.dart';
+import '../services/notification_service.dart';
 import '../services/task_storage.dart';
 import '../services/widget_service.dart';
 import '../widgets/add_task_dialog.dart';
@@ -66,6 +67,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         setState(() => tasks = loadedTasks);
       }
       await WidgetService.updateWidget(loadedTasks, DateTime.now());
+      await NotificationService.rescheduleAll(loadedTasks);
     } catch (e) {
       debugPrint('Failed to load tasks: $e');
     }
@@ -74,6 +76,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   Future<void> _saveTasks() async {
     await TaskStorage.saveTasks(tasks);
     await WidgetService.updateWidget(tasks, DateTime.now());
+    await NotificationService.rescheduleAll(tasks);
   }
 
   Future<void> _loadLastDate() async {
@@ -102,6 +105,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     Priority priority,
     int repeatIntervalDays,
     DateTime creationDate,
+    String? dueTime,
   ) async {
     setState(() {
       tasks.add(Task(
@@ -110,6 +114,7 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         priority: priority,
         repeatIntervalDays: repeatIntervalDays,
         creationDate: creationDate,
+        dueTime: dueTime,
       ));
     });
     await _saveTasks();
@@ -131,13 +136,15 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
         initialPriority: task.priority,
         initialIntervalDays: task.repeatIntervalDays,
         initialDate: task.creationDate,
-        onAdd: (title, repeatDays, priority, intervalDays, creationDate) {
+        initialDueTime: task.dueTime,
+        onAdd: (title, repeatDays, priority, intervalDays, creationDate, dueTime) {
           setState(() {
             task.title = title;
             task.repeatDays = repeatDays;
             task.priority = priority;
             task.repeatIntervalDays = intervalDays;
             task.creationDate = creationDate;
+            task.dueTime = dueTime;
           });
           _saveTasks();
         },

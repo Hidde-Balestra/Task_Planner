@@ -247,4 +247,60 @@ void main() {
       expect(task.postponedDates, isEmpty);
     });
   });
+
+  group('Task - dueTime', () {
+    test('dueTime is null by default', () {
+      final task = Task(title: 'T', repeatDays: []);
+      expect(task.dueTime, isNull);
+    });
+
+    test('dueTime can be set via constructor', () {
+      final task = Task(title: 'T', repeatDays: [], dueTime: '14:30');
+      expect(task.dueTime, equals('14:30'));
+    });
+
+    test('dueTime is included in toMap when set', () {
+      final task = Task(title: 'T', repeatDays: [], dueTime: '09:00');
+      expect(task.toMap()['dueTime'], equals('09:00'));
+    });
+
+    test('dueTime is absent from toMap when null', () {
+      final task = Task(title: 'T', repeatDays: []);
+      expect(task.toMap().containsKey('dueTime'), isFalse);
+    });
+
+    test('dueTime is restored from fromMap', () {
+      final task = Task.fromMap({
+        'title': 'T',
+        'repeatDays': <int>[],
+        'dueTime': '23:59',
+      });
+      expect(task.dueTime, equals('23:59'));
+    });
+
+    test('missing dueTime in map yields null', () {
+      final task = Task.fromMap({'title': 'T', 'repeatDays': <int>[]});
+      expect(task.dueTime, isNull);
+    });
+
+    test('dueTime round-trips through toJson / fromJson', () {
+      final task = Task(title: 'T', repeatDays: [], dueTime: '08:15');
+      final restored = Task.fromJson(task.toJson());
+      expect(restored.dueTime, equals('08:15'));
+    });
+
+    test('null dueTime round-trips through toJson / fromJson', () {
+      final task = Task(title: 'T', repeatDays: []);
+      final restored = Task.fromJson(task.toJson());
+      expect(restored.dueTime, isNull);
+    });
+
+    test('dueTime can be mutated on an existing task', () {
+      final task = Task(title: 'T', repeatDays: []);
+      task.dueTime = '10:00';
+      expect(task.dueTime, equals('10:00'));
+      task.dueTime = null;
+      expect(task.dueTime, isNull);
+    });
+  });
 }

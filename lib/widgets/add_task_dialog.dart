@@ -25,12 +25,14 @@ class AddTaskDialog extends StatefulWidget {
     Priority priority,
     int repeatIntervalDays,
     DateTime creationDate,
+    String? dueTime,
   ) onAdd;
   final String? initialTitle;
   final List<int>? initialDays;
   final Priority? initialPriority;
   final int? initialIntervalDays;
   final DateTime? initialDate;
+  final String? initialDueTime;
 
   const AddTaskDialog({
     super.key,
@@ -40,6 +42,7 @@ class AddTaskDialog extends StatefulWidget {
     this.initialPriority,
     this.initialIntervalDays,
     this.initialDate,
+    this.initialDueTime,
   });
 
   @override
@@ -53,6 +56,7 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
   late _RepeatType _repeatType;
   late List<int> _selectedDays;
   late DateTime _date;
+  TimeOfDay? _dueTime;
 
   static const _weekDays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
   static const _intervalPresets = [
@@ -68,6 +72,17 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     _titleController = TextEditingController(text: widget.initialTitle ?? '');
     _priority = widget.initialPriority ?? Priority.low;
     _date = widget.initialDate ?? DateTime.now();
+
+    if (widget.initialDueTime != null) {
+      final parts = widget.initialDueTime!.split(':');
+      if (parts.length == 2) {
+        final h = int.tryParse(parts[0]);
+        final m = int.tryParse(parts[1]);
+        if (h != null && m != null) {
+          _dueTime = TimeOfDay(hour: h, minute: m);
+        }
+      }
+    }
 
     final intervalDays = widget.initialIntervalDays ?? 0;
     if (intervalDays > 0) {
@@ -102,6 +117,20 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     if (picked != null) setState(() => _date = picked);
   }
 
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: _dueTime ?? TimeOfDay.now(),
+    );
+    if (picked != null) setState(() => _dueTime = picked);
+  }
+
+  String _formatTime(TimeOfDay t) {
+    final h = t.hour.toString().padLeft(2, '0');
+    final m = t.minute.toString().padLeft(2, '0');
+    return '$h:$m';
+  }
+
   void _submit() {
     if (_titleController.text.trim().isEmpty) return;
     final title = _titleController.text.trim();
@@ -110,7 +139,8 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
     final intervalDays = _repeatType == _RepeatType.interval
         ? (int.tryParse(_intervalController.text) ?? 0)
         : 0;
-    widget.onAdd(title, repeatDays, _priority, intervalDays, _date);
+    final dueTimeStr = _dueTime != null ? _formatTime(_dueTime!) : null;
+    widget.onAdd(title, repeatDays, _priority, intervalDays, _date, dueTimeStr);
     Navigator.pop(context);
   }
 
@@ -149,6 +179,33 @@ class _AddTaskDialogState extends State<AddTaskDialog> {
               }).toList(),
             ),
             const SizedBox(height: 16),
+            const Text('Deadline', style: TextStyle(fontSize: 12)),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                if (_dueTime == null) ...[
+                  TextButton.icon(
+                    onPressed: _pickTime,
+                    icon: const Icon(Icons.access_time, size: 16),
+                    label: const Text('Geen deadline'),
+                  ),
+                ] else ...[
+                  TextButton.icon(
+                    onPressed: _pickTime,
+                    icon: const Icon(Icons.access_time, size: 16),
+                    label: Text(_formatTime(_dueTime!)),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    tooltip: 'Deadline verwijderen',
+                    onPressed: () => setState(() => _dueTime = null),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ],
+            ),
+            const SizedBox(height: 8),
             const Text('Repeat', style: TextStyle(fontSize: 12)),
             const SizedBox(height: 6),
             SegmentedButton<_RepeatType>(

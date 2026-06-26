@@ -27,9 +27,32 @@ class TaskTile extends StatelessWidget {
     this.onPostpone,
   });
 
+  Color? _dueTimeColor(BuildContext context) {
+    if (task.dueTime == null) return null;
+    final completed = task.isCompleted(date);
+    if (completed) {
+      return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.45);
+    }
+    final now = DateTime.now();
+    final isToday = date.year == now.year &&
+        date.month == now.month &&
+        date.day == now.day;
+    if (!isToday) {
+      return Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6);
+    }
+    final parts = task.dueTime!.split(':');
+    final hour = int.tryParse(parts[0]) ?? 0;
+    final minute = int.tryParse(parts[1]) ?? 0;
+    final dueDateTime = DateTime(now.year, now.month, now.day, hour, minute);
+    return now.isAfter(dueDateTime)
+        ? Theme.of(context).colorScheme.error
+        : Theme.of(context).colorScheme.secondary;
+  }
+
   @override
   Widget build(BuildContext context) {
     final completed = task.isCompleted(date);
+    final dueTimeColor = _dueTimeColor(context);
 
     return Dismissible(
       key: Key(task.id),
@@ -72,6 +95,12 @@ class TaskTile extends StatelessWidget {
                 : Theme.of(context).colorScheme.onSurface,
           ),
         ),
+        subtitle: task.dueTime != null
+            ? Text(
+                task.dueTime!,
+                style: TextStyle(fontSize: 12, color: dueTimeColor),
+              )
+            : null,
         trailing: Checkbox(
           value: completed,
           onChanged: (_) => onToggle(),
