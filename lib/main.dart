@@ -31,7 +31,6 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await HomeWidget.registerInteractivityCallback(backgroundCallback);
   await NotificationService.initialize();
-  await NotificationService.requestPermissions();
   runApp(const TaskPlannerApp());
 }
 

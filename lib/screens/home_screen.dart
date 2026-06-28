@@ -28,6 +28,10 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
     WidgetsBinding.instance.addObserver(this);
     _loadTasks();
     _loadLastDate();
+    // Request after the first frame so an Activity context is available.
+    WidgetsBinding.instance.addPostFrameCallback(
+      (_) => NotificationService.requestPermissions(),
+    );
   }
 
   @override

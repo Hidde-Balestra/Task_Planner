@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart' as fln;
+import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
@@ -16,6 +17,8 @@ class NotificationService {
     if (_initialized) return;
     try {
       tz.initializeTimeZones();
+      final tzInfo = await FlutterTimezone.getLocalTimezone();
+      tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
       const android = fln.AndroidInitializationSettings('ic_notification');
       await _plugin.initialize(const fln.InitializationSettings(android: android));
       _initialized = true;
@@ -74,24 +77,46 @@ class NotificationService {
     );
     if (scheduled.isBefore(tz.TZDateTime.now(tz.local))) return;
 
-    await _plugin.zonedSchedule(
-      notificationIdForTask(task.id, date),
-      task.title,
-      'Deadline: $dueTime',
-      scheduled,
-      const fln.NotificationDetails(
-        android: fln.AndroidNotificationDetails(
-          'task_deadlines',
-          'Task Deadlines',
-          channelDescription: 'Herinneringen voor taak-deadlines',
-          importance: fln.Importance.high,
-          priority: fln.Priority.high,
-        ),
+    const details = fln.NotificationDetails(
+      android: fln.AndroidNotificationDetails(
+        'task_deadlines',
+        'Task Deadlines',
+        channelDescription: 'Herinneringen voor taak-deadlines',
+        importance: fln.Importance.high,
+        priority: fln.Priority.high,
       ),
-      androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
-      uiLocalNotificationDateInterpretation:
-          fln.UILocalNotificationDateInterpretation.absoluteTime,
     );
+
+    try {
+      // Prefer exact alarms (fires precisely at the scheduled time).
+      await _plugin.zonedSchedule(
+        notificationIdForTask(task.id, date),
+        task.title,
+        'Deadline: $dueTime',
+        scheduled,
+        details,
+        androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            fln.UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    } catch (_) {
+      // Fall back to inexact when exact-alarm permission is unavailable
+      // (e.g. Android 12 without SCHEDULE_EXACT_ALARM grant).
+      try {
+        await _plugin.zonedSchedule(
+          notificationIdForTask(task.id, date),
+          task.title,
+          'Deadline: $dueTime',
+          scheduled,
+          details,
+          androidScheduleMode: fln.AndroidScheduleMode.inexactAllowWhileIdle,
+          uiLocalNotificationDateInterpretation:
+              fln.UILocalNotificationDateInterpretation.absoluteTime,
+        );
+      } catch (e) {
+        debugPrint('NotificationService: schedule failed for ${task.id}: $e');
+      }
+    }
   }
 
   /// Returns a deterministic, positive 31-bit notification ID for a
