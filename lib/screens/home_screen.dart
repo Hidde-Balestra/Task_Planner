@@ -72,9 +72,32 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
       }
       await WidgetService.updateWidget(loadedTasks, DateTime.now());
       await NotificationService.rescheduleAll(loadedTasks);
+      _showOverdueAlert(loadedTasks);
     } catch (e) {
       debugPrint('Failed to load tasks: $e');
     }
+  }
+
+  void _showOverdueAlert(List<Task> allTasks) {
+    if (!mounted) return;
+    final overdue = NotificationService.overdueTasksForToday(
+      allTasks,
+      DateTime.now(),
+    );
+    if (overdue.isEmpty) return;
+    final msg = overdue.length == 1
+        ? '"${overdue.first.title}" is nog niet afgevinkt'
+        : '${overdue.length} taken zijn nog niet afgevinkt';
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('⚠ $msg'),
+        duration: const Duration(seconds: 6),
+        action: SnackBarAction(
+          label: 'Bekijk',
+          onPressed: _goToToday,
+        ),
+      ),
+    );
   }
 
   Future<void> _saveTasks() async {

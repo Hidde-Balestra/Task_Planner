@@ -17,8 +17,14 @@ class NotificationService {
     if (_initialized) return;
     try {
       tz.initializeTimeZones();
-      final tzInfo = await FlutterTimezone.getLocalTimezone();
-      tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
+      // Timezone detection is best-effort: UTC fallback keeps the service
+      // working even if flutter_timezone has issues on this device.
+      try {
+        final tzInfo = await FlutterTimezone.getLocalTimezone();
+        tz.setLocalLocation(tz.getLocation(tzInfo.identifier));
+      } catch (e) {
+        debugPrint('NotificationService: timezone detection failed, using UTC: $e');
+      }
       const android = fln.AndroidInitializationSettings('ic_notification');
       await _plugin.initialize(const fln.InitializationSettings(android: android));
       _initialized = true;
@@ -88,11 +94,10 @@ class NotificationService {
     );
 
     try {
-      // Prefer exact alarms (fires precisely at the scheduled time).
       await _plugin.zonedSchedule(
         notificationIdForTask(task.id, date),
         task.title,
-        'Deadline: $dueTime',
+        'Deadline verstreken: $dueTime',
         scheduled,
         details,
         androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
@@ -100,13 +105,12 @@ class NotificationService {
             fln.UILocalNotificationDateInterpretation.absoluteTime,
       );
     } catch (_) {
-      // Fall back to inexact when exact-alarm permission is unavailable
-      // (e.g. Android 12 without SCHEDULE_EXACT_ALARM grant).
+      // Fall back to inexact when exact-alarm permission is unavailable.
       try {
         await _plugin.zonedSchedule(
           notificationIdForTask(task.id, date),
           task.title,
-          'Deadline: $dueTime',
+          'Deadline verstreken: $dueTime',
           scheduled,
           details,
           androidScheduleMode: fln.AndroidScheduleMode.inexactAllowWhileIdle,
@@ -117,6 +121,27 @@ class NotificationService {
         debugPrint('NotificationService: schedule failed for ${task.id}: $e');
       }
     }
+  }
+
+  /// Returns tasks from [tasks] that have a dueTime in the past at [now],
+  /// appear on today's date, and are not yet completed.
+  /// Used by HomeScreen for the in-app overdue alert.
+  static List<Task> overdueTasksForToday(List<Task> tasks, DateTime now) {
+    final today = DateTime(now.year, now.month, now.day);
+    return tasks.where((task) {
+      if (task.dueTime == null) return false;
+      if (task.isCompleted(today)) return false;
+      final appears =
+          WidgetService.filterTasksForDate([task], today).isNotEmpty;
+      if (!appears) return false;
+      final parts = task.dueTime!.split(':');
+      if (parts.length != 2) return false;
+      final h = int.tryParse(parts[0]);
+      final m = int.tryParse(parts[1]);
+      if (h == null || m == null) return false;
+      final deadline = DateTime(now.year, now.month, now.day, h, m);
+      return now.isAfter(deadline);
+    }).toList();
   }
 
   /// Returns a deterministic, positive 31-bit notification ID for a

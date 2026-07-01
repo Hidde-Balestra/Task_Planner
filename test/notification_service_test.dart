@@ -214,6 +214,129 @@ void main() {
     });
   });
 
+  group('NotificationService - overdueTasksForToday', () {
+    // Use a fixed "now" so tests are time-independent.
+    final now = DateTime(2024, 6, 15, 15, 0); // 15:00 on a Saturday
+
+    test('returns task whose dueTime has passed today', () {
+      final task = Task(
+        title: 'T',
+        repeatDays: [],
+        creationDate: DateTime(2024, 6, 15),
+        dueTime: '14:00',
+      );
+      final overdue = NotificationService.overdueTasksForToday([task], now);
+      expect(overdue, contains(task));
+    });
+
+    test('does not return task whose dueTime is still in the future', () {
+      final task = Task(
+        title: 'T',
+        repeatDays: [],
+        creationDate: DateTime(2024, 6, 15),
+        dueTime: '16:00',
+      );
+      final overdue = NotificationService.overdueTasksForToday([task], now);
+      expect(overdue, isEmpty);
+    });
+
+    test('does not return already-completed tasks', () {
+      final task = Task(
+        title: 'T',
+        repeatDays: [],
+        creationDate: DateTime(2024, 6, 15),
+        dueTime: '14:00',
+      );
+      task.toggleCompletion(DateTime(2024, 6, 15));
+      final overdue = NotificationService.overdueTasksForToday([task], now);
+      expect(overdue, isEmpty);
+    });
+
+    test('does not return tasks without a dueTime', () {
+      final task = Task(
+        title: 'T',
+        repeatDays: [],
+        creationDate: DateTime(2024, 6, 15),
+      );
+      final overdue = NotificationService.overdueTasksForToday([task], now);
+      expect(overdue, isEmpty);
+    });
+
+    test('does not return a one-time task that does not appear today', () {
+      final task = Task(
+        title: 'T',
+        repeatDays: [],
+        creationDate: DateTime(2024, 6, 14), // yesterday
+        dueTime: '14:00',
+      );
+      final overdue = NotificationService.overdueTasksForToday([task], now);
+      expect(overdue, isEmpty);
+    });
+
+    test('returns multiple overdue tasks', () {
+      final t1 = Task(
+        title: 'A',
+        repeatDays: [],
+        creationDate: DateTime(2024, 6, 15),
+        dueTime: '09:00',
+      );
+      final t2 = Task(
+        title: 'B',
+        repeatDays: [],
+        creationDate: DateTime(2024, 6, 15),
+        dueTime: '12:30',
+      );
+      final t3 = Task(
+        title: 'C',
+        repeatDays: [],
+        creationDate: DateTime(2024, 6, 15),
+        dueTime: '18:00', // not yet overdue
+      );
+      final overdue = NotificationService.overdueTasksForToday([t1, t2, t3], now);
+      expect(overdue.length, 2);
+      expect(overdue, containsAll([t1, t2]));
+      expect(overdue, isNot(contains(t3)));
+    });
+
+    test('returns weekly task overdue today', () {
+      // Saturday = weekday 6 in DateTime → index 6 in app
+      final task = Task(
+        title: 'T',
+        repeatDays: [6], // Saturday
+        creationDate: DateTime(2024, 6, 1),
+        dueTime: '10:00',
+      );
+      // now is Saturday 2024-06-15 15:00 → dueTime 10:00 already passed
+      final overdue = NotificationService.overdueTasksForToday([task], now);
+      expect(overdue, contains(task));
+    });
+
+    test('returns interval task overdue today', () {
+      // Every 5 days from Jun 10 → Jun 15 is an occurrence
+      final task = Task(
+        title: 'T',
+        repeatDays: [],
+        repeatIntervalDays: 5,
+        creationDate: DateTime(2024, 6, 10),
+        dueTime: '08:00',
+      );
+      final overdue = NotificationService.overdueTasksForToday([task], now);
+      expect(overdue, contains(task));
+    });
+
+    test('postponed task appears on postponed date, not original', () {
+      final task = Task(
+        title: 'T',
+        repeatDays: [],
+        creationDate: DateTime(2024, 6, 14), // yesterday
+        dueTime: '14:00',
+      );
+      task.postponeTo(DateTime(2024, 6, 14), DateTime(2024, 6, 15));
+      final overdue = NotificationService.overdueTasksForToday([task], now);
+      expect(overdue, contains(task));
+    });
+  });
+
   group('NotificationService - rescheduleAll guard', () {
     test('rescheduleAll returns immediately when not initialized', () async {
       // NotificationService._initialized is false in test environment
