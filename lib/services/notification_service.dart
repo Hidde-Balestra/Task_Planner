@@ -45,6 +45,25 @@ class NotificationService {
     }
   }
 
+  /// Shows an immediate notification to verify the notification channel works.
+  static Future<void> sendTestNotification() async {
+    if (!_initialized) return;
+    const details = fln.NotificationDetails(
+      android: fln.AndroidNotificationDetails(
+        'task_deadlines',
+        'Task Deadlines',
+        channelDescription: 'Herinneringen voor taak-deadlines',
+        importance: fln.Importance.high,
+        priority: fln.Priority.high,
+      ),
+    );
+    try {
+      await _plugin.show(999, 'Test melding ✓', 'Meldingen werken correct!', details);
+    } catch (e) {
+      debugPrint('NotificationService: test notification failed: $e');
+    }
+  }
+
   static Future<void> cancelAll() async {
     if (!_initialized) return;
     try {

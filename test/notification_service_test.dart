@@ -337,6 +337,12 @@ void main() {
     });
   });
 
+  group('NotificationService - sendTestNotification guard', () {
+    test('sendTestNotification completes without throwing when not initialized', () async {
+      await expectLater(NotificationService.sendTestNotification(), completes);
+    });
+  });
+
   group('NotificationService - rescheduleAll guard', () {
     test('rescheduleAll returns immediately when not initialized', () async {
       // NotificationService._initialized is false in test environment
