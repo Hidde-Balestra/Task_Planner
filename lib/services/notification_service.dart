@@ -5,6 +5,7 @@ import 'package:timezone/data/latest_all.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/task.dart';
+import 'settings_service.dart';
 import 'widget_service.dart';
 
 class NotificationService {
@@ -44,8 +45,18 @@ class NotificationService {
     }
   }
 
+  static Future<void> cancelAll() async {
+    if (!_initialized) return;
+    try {
+      await _plugin.cancelAll();
+    } catch (e) {
+      debugPrint('NotificationService: cancelAll failed: $e');
+    }
+  }
+
   /// Cancels all scheduled task notifications, then reschedules for all tasks
   /// with a dueTime, covering the next [_lookaheadDays] days from [from].
+  /// No-ops if vacation mode is enabled.
   static Future<void> rescheduleAll(
     List<Task> tasks, {
     DateTime? from,
@@ -53,6 +64,7 @@ class NotificationService {
     if (!_initialized) return;
     try {
       await _plugin.cancelAll();
+      if (await SettingsService.loadVacationMode()) return;
       final start = from ?? DateTime.now();
       for (final task in tasks) {
         if (task.dueTime == null) continue;

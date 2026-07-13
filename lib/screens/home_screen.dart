@@ -3,13 +3,13 @@ import 'package:intl/intl.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../models/task.dart';
-import '../services/backup_service.dart';
 import '../services/notification_service.dart';
 import '../services/task_storage.dart';
 import '../services/widget_service.dart';
 import '../widgets/add_task_dialog.dart';
 import '../widgets/task_tile.dart';
 import 'overview_screen.dart';
+import 'settings_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -312,44 +312,6 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Task> get _filteredTasks =>
       WidgetService.filterTasksForDate(tasks, selectedDate);
 
-  Future<void> _handleMenuAction(String value) async {
-    if (value == 'backup') {
-      try {
-        final path = await BackupService.backup(tasks);
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Backup opgeslagen: $path')),
-        );
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Backup mislukt')),
-        );
-      }
-    } else if (value == 'restore') {
-      try {
-        final restored = await BackupService.restore();
-        if (!mounted) return;
-        if (restored != null) {
-          setState(() => tasks = restored);
-          if (!mounted) return;
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Backup hersteld')),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Geen backupbestand gevonden')),
-          );
-        }
-      } catch (e) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Herstellen mislukt')),
-        );
-      }
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('E, MMM d').format(selectedDate);
@@ -391,12 +353,16 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
               ),
             ),
           ),
-          PopupMenuButton<String>(
-            onSelected: _handleMenuAction,
-            itemBuilder: (context) => const [
-              PopupMenuItem(value: 'backup', child: Text('Backup Tasks')),
-              PopupMenuItem(value: 'restore', child: Text('Restore Tasks')),
-            ],
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Instellingen',
+            onPressed: () async {
+              await Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+              if (mounted) _loadTasks();
+            },
           ),
         ],
       ),

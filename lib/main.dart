@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:home_widget/home_widget.dart';
 
+import 'app_notifiers.dart';
 import 'screens/home_screen.dart';
 import 'services/notification_service.dart';
+import 'services/settings_service.dart';
 import 'services/task_storage.dart';
 import 'services/widget_service.dart';
 
@@ -31,6 +33,7 @@ void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await HomeWidget.registerInteractivityCallback(backgroundCallback);
   await NotificationService.initialize();
+  themeMode.value = await SettingsService.loadThemeMode();
   runApp(const TaskPlannerApp());
 }
 
@@ -39,20 +42,23 @@ class TaskPlannerApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Task Planner',
-      theme: ThemeData(
-        colorSchemeSeed: Colors.blueAccent,
-        useMaterial3: true,
-        brightness: Brightness.light,
+    return ValueListenableBuilder<ThemeMode>(
+      valueListenable: themeMode,
+      builder: (_, mode, __) => MaterialApp(
+        title: 'Task Planner',
+        theme: ThemeData(
+          colorSchemeSeed: Colors.blueAccent,
+          useMaterial3: true,
+          brightness: Brightness.light,
+        ),
+        darkTheme: ThemeData(
+          colorSchemeSeed: Colors.blueAccent,
+          useMaterial3: true,
+          brightness: Brightness.dark,
+        ),
+        themeMode: mode,
+        home: const HomeScreen(),
       ),
-      darkTheme: ThemeData(
-        colorSchemeSeed: Colors.blueAccent,
-        useMaterial3: true,
-        brightness: Brightness.dark,
-      ),
-      themeMode: ThemeMode.system,
-      home: const HomeScreen(),
     );
   }
 }
