@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 class UpdateService {
-  static const currentVersion = '1.5.2';
+  static const currentVersion = '1.5.3';
   static const releasesUrl =
       'https://github.com/Hidde-Balestra/Task_Planner/releases';
 
@@ -31,7 +31,7 @@ class UpdateService {
 
   /// Returns true if [latest] is strictly newer than [current] (semver compare).
   static bool isNewerVersion(String latest, String current) {
-    final parse = (String v) =>
+    List<int> parse(String v) =>
         v.split('.').map((s) => int.tryParse(s) ?? 0).toList();
     final l = parse(latest);
     final c = parse(current);
