@@ -48,6 +48,12 @@ dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
 }
 
+// flutter_local_notifications compiles with Java 8 source/target which is deprecated
+// in newer JDKs. Suppress the resulting -Xlint:options warnings from its javac tasks.
+tasks.withType<JavaCompile>().configureEach {
+    options.compilerArgs.addAll(listOf("-Xlint:-options"))
+}
+
 flutter {
     source = "../.."
 }
