@@ -28,6 +28,11 @@ jobs:
       - name: Test
         run: flutter test
 
+      - name: Restore debug keystore
+        run: |
+          mkdir -p ~/.android
+          echo "${{ secrets.DEBUG_KEYSTORE_BASE64 }}" | base64 -d > ~/.android/debug.keystore
+
       - name: Build release APK
         run: flutter build apk --release
 
