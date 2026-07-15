@@ -27,7 +27,9 @@ class NotificationService {
         debugPrint('NotificationService: timezone detection failed, using UTC: $e');
       }
       const android = fln.AndroidInitializationSettings('ic_notification');
-      await _plugin.initialize(const fln.InitializationSettings(android: android));
+      await _plugin.initialize(
+        settings: const fln.InitializationSettings(android: android),
+      );
       _initialized = true;
     } catch (e) {
       debugPrint('NotificationService: initialize failed: $e');
@@ -58,7 +60,12 @@ class NotificationService {
       ),
     );
     try {
-      await _plugin.show(999, 'Test melding ✓', 'Meldingen werken correct!', details);
+      await _plugin.show(
+        id: 999,
+        title: 'Test melding ✓',
+        body: 'Meldingen werken correct!',
+        notificationDetails: details,
+      );
     } catch (e) {
       debugPrint('NotificationService: test notification failed: $e');
     }
@@ -126,27 +133,23 @@ class NotificationService {
 
     try {
       await _plugin.zonedSchedule(
-        notificationIdForTask(task.id, date),
-        task.title,
-        'Deadline verstreken: $dueTime',
-        scheduled,
-        details,
+        id: notificationIdForTask(task.id, date),
+        title: task.title,
+        body: 'Deadline verstreken: $dueTime',
+        scheduledDate: scheduled,
+        notificationDetails: details,
         androidScheduleMode: fln.AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            fln.UILocalNotificationDateInterpretation.absoluteTime,
       );
     } catch (_) {
       // Fall back to inexact when exact-alarm permission is unavailable.
       try {
         await _plugin.zonedSchedule(
-          notificationIdForTask(task.id, date),
-          task.title,
-          'Deadline verstreken: $dueTime',
-          scheduled,
-          details,
+          id: notificationIdForTask(task.id, date),
+          title: task.title,
+          body: 'Deadline verstreken: $dueTime',
+          scheduledDate: scheduled,
+          notificationDetails: details,
           androidScheduleMode: fln.AndroidScheduleMode.inexactAllowWhileIdle,
-          uiLocalNotificationDateInterpretation:
-              fln.UILocalNotificationDateInterpretation.absoluteTime,
         );
       } catch (e) {
         debugPrint('NotificationService: schedule failed for ${task.id}: $e');

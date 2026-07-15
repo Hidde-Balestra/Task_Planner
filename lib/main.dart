@@ -44,7 +44,7 @@ class TaskPlannerApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return ValueListenableBuilder<ThemeMode>(
       valueListenable: themeMode,
-      builder: (_, mode, __) => MaterialApp(
+      builder: (_, mode, _) => MaterialApp(
         title: 'Task Planner',
         theme: ThemeData(
           colorSchemeSeed: Colors.blueAccent,

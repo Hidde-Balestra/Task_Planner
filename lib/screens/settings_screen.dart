@@ -195,7 +195,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
             child: ValueListenableBuilder<ThemeMode>(
               valueListenable: themeMode,
-              builder: (_, mode, __) => SegmentedButton<ThemeMode>(
+              builder: (_, mode, _) => SegmentedButton<ThemeMode>(
                 segments: const [
                   ButtonSegment(
                     value: ThemeMode.system,
