@@ -31,6 +31,20 @@ android {
         versionName = flutter.versionName
     }
 
+    signingConfigs {
+        getByName("debug") {
+            // Explicit path (instead of relying on AGP's own default-location
+            // lookup) so CI and local builds share the exact same keystore file
+            // and produce APKs with an identical signing certificate.
+            val keystorePath = System.getenv("DEBUG_KEYSTORE_PATH")
+                ?: "${System.getProperty("user.home")}/.android/debug.keystore"
+            storeFile = file(keystorePath)
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
+
     buildTypes {
         release {
             // TODO: Add your own signing config for the release build.
