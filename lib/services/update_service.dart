@@ -2,7 +2,7 @@ import 'dart:convert';
 import 'dart:io';
 
 class UpdateService {
-  static const currentVersion = '1.5.4';
+  static const currentVersion = '1.6.0';
   static const releasesUrl =
       'https://github.com/Hidde-Balestra/Task_Planner/releases';
 

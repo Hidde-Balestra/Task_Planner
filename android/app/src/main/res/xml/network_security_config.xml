@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Allows plaintext HTTP, which Android blocks by default since API 28.
+  Needed for the device-to-device transfer feature, which sends a task
+  backup directly between two phones over the local wifi network (never
+  over the internet, so no cloud endpoint to secure with TLS).
+-->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

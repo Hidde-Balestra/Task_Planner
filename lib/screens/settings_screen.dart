@@ -7,6 +7,7 @@ import '../services/notification_service.dart';
 import '../services/settings_service.dart';
 import '../services/task_storage.dart';
 import '../services/update_service.dart';
+import 'device_transfer_screen.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -121,62 +122,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  Widget _buildUpdateTile() {
-    if (_checkingUpdate) {
-      return const ListTile(
-        leading: SizedBox(
-          width: 24,
-          height: 24,
-          child: CircularProgressIndicator(strokeWidth: 2),
-        ),
-        title: Text('Controleren op updates…'),
-      );
-    }
-
+  String _updateLabel() {
+    if (_checkingUpdate) return 'Bezig met controleren…';
     if (_updateError || _latestVersion == null) {
-      return ListTile(
-        leading: const Icon(Icons.cloud_off_outlined),
-        title: const Text('Kan updates niet controleren'),
-        trailing: IconButton(
-          icon: const Icon(Icons.refresh),
-          tooltip: 'Opnieuw proberen',
-          onPressed: _checkForUpdate,
-        ),
-      );
+      return 'Kan niet controleren — tik om releases te bekijken';
     }
-
     final hasUpdate = UpdateService.isNewerVersion(
       _latestVersion!,
       UpdateService.currentVersion,
     );
-
-    if (hasUpdate) {
-      return ListTile(
-        leading: Icon(
-          Icons.system_update,
-          color: Theme.of(context).colorScheme.primary,
-        ),
-        title: Text('Versie $_latestVersion beschikbaar'),
-        subtitle: const Text('Tik om te downloaden'),
-        onTap: () => launchUrl(
-          Uri.parse(UpdateService.releasesUrl),
-          mode: LaunchMode.externalApplication,
-        ),
-      );
-    }
-
-    return ListTile(
-      leading: Icon(
-        Icons.check_circle_outline,
-        color: Theme.of(context).colorScheme.secondary,
-      ),
-      title: const Text('Je hebt de nieuwste versie'),
-      trailing: IconButton(
-        icon: const Icon(Icons.refresh),
-        tooltip: 'Opnieuw controleren',
-        onPressed: _checkForUpdate,
-      ),
-    );
+    return hasUpdate ? 'Update beschikbaar: v$_latestVersion' : 'Nieuwste versie';
   }
 
   @override
@@ -286,14 +241,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
           // --- Over ---
           _SectionHeader('Over'),
           ListTile(
-            leading: const Icon(Icons.tag),
-            title: const Text('Huidige versie'),
-            trailing: Text(
-              UpdateService.currentVersion,
-              style: Theme.of(context).textTheme.bodyMedium,
+            leading: const Icon(Icons.open_in_new),
+            title: Text('Versie ${UpdateService.currentVersion}'),
+            subtitle: Text(_updateLabel()),
+            onTap: () => launchUrl(
+              Uri.parse(UpdateService.releasesUrl),
+              mode: LaunchMode.externalApplication,
             ),
           ),
-          _buildUpdateTile(),
 
           // --- Gegevens ---
           _SectionHeader('Gegevens'),
@@ -308,6 +263,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
             title: const Text('Importeer taken'),
             subtitle: const Text('Herstel vanuit backup'),
             onTap: _restore,
+          ),
+          ListTile(
+            leading: const Icon(Icons.qr_code),
+            title: const Text('Verstuur naar ander toestel'),
+            subtitle: const Text('Via wifi, met een QR-code'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    const DeviceTransferScreen(mode: TransferMode.send),
+              ),
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.qr_code_scanner),
+            title: const Text('Ontvang van ander toestel'),
+            subtitle: const Text('Scan de QR-code van het andere toestel'),
+            onTap: () => Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    const DeviceTransferScreen(mode: TransferMode.receive),
+              ),
+            ),
           ),
         ],
       ),

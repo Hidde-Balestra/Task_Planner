@@ -312,6 +312,44 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
   List<Task> get _filteredTasks =>
       WidgetService.filterTasksForDate(tasks, selectedDate);
 
+  Future<void> _showMenu() async {
+    await showModalBottomSheet(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) => SafeArea(
+        child: Wrap(
+          children: [
+            ListTile(
+              leading: const Icon(Icons.list_alt),
+              title: const Text('Overzicht'),
+              onTap: () {
+                Navigator.pop(sheetContext);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => OverviewScreen(tasks: tasks),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.settings),
+              title: const Text('Instellingen'),
+              onTap: () async {
+                Navigator.pop(sheetContext);
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => const SettingsScreen()),
+                );
+                if (mounted) _loadTasks();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final formattedDate = DateFormat('E, MMM d').format(selectedDate);
@@ -344,25 +382,9 @@ class _HomeScreenState extends State<HomeScreen> with WidgetsBindingObserver {
             onPressed: () => _changeDay(1),
           ),
           IconButton(
-            icon: const Icon(Icons.list_alt),
-            tooltip: 'Overzicht',
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => OverviewScreen(tasks: tasks),
-              ),
-            ),
-          ),
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Instellingen',
-            onPressed: () async {
-              await Navigator.push(
-                context,
-                MaterialPageRoute(builder: (_) => const SettingsScreen()),
-              );
-              if (mounted) _loadTasks();
-            },
+            icon: const Icon(Icons.more_vert),
+            tooltip: 'Menu',
+            onPressed: _showMenu,
           ),
         ],
       ),
